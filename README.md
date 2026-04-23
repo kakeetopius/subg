@@ -96,9 +96,17 @@ Configuration can be set via:
 
 Place a `subg.toml` file in one of these locations:
 
+**On Linux:**
+
 - `$HOME/subg.toml`
 - `$XDG_CONFIG_HOME/subg.toml` or `~/.config/subg.toml`
 - `$XDG_CONFIG_HOME/subg/subg.toml` or `~/.config/subg/subg.toml`
+
+**On Windows:**
+
+- `%USERPROFILE%\subg.toml`
+- `%APPDATA%\subg.toml`
+- `%APPDATA%\subg\subg.toml`
 
 **Example `subg.toml`:**
 

@@ -50,6 +50,7 @@ func init() {
 	config.BindPFlag("cache_dir", rootCmd.PersistentFlags().Lookup("cache-dir"))
 	config.SetDefault("cache_dir", path.Join(useConfigDir, "subg"))
 
+	rootCmd.PersistentFlags().MarkHidden("api-key")
 	apiKeyPflag := rootCmd.PersistentFlags().Lookup("api-key")
 	config.BindPFlag("opensubtitles.api_key", apiKeyPflag)
 	config.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
