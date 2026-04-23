@@ -17,6 +17,8 @@ import (
 	"github.com/pterm/pterm"
 )
 
+var CachedCredentialsFile = "auth.json"
+
 type LoginOptions struct {
 	UserName string
 	Password string
@@ -42,6 +44,7 @@ type DownloadOptions struct {
 	FileID     int
 	Format     string
 	OutPutFile string
+	OutPutDir  string
 
 	APIKey   string
 	CacheDir string
@@ -79,7 +82,7 @@ func Login(opts LoginOptions) error {
 		return fmt.Errorf("password cannot be empty")
 	}
 
-	authFile := path.Join(opts.CacheDir, "auth.json")
+	authFile := path.Join(opts.CacheDir, CachedCredentialsFile)
 	client, err := opensubtitles.NewClient(opensubtitles.Config{
 		ApiKey:    opts.APIKey,
 		UserAgent: "",
@@ -88,28 +91,37 @@ func Login(opts LoginOptions) error {
 		return err
 	}
 
+	spinner, err := pterm.DefaultSpinner.Start("Logging in.........")
+	if err != nil {
+		return err
+	}
 	loginParams := opensubtitles.LoginRequest{
 		Username: opts.UserName,
 		Password: opts.Password,
 	}
 	resp, err := client.Login(context.Background(), loginParams)
 	if err != nil {
+		spinner.Fail()
 		return err
 	}
 	cacheFile, err := util.CreateFileIfNotExists(authFile)
 	if err != nil {
+		spinner.Fail()
 		return err
 	}
 	defer cacheFile.Close()
 
 	jsonResponse, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
+		spinner.Fail()
 		return err
 	}
 	_, err = cacheFile.Write(jsonResponse)
 	if err != nil {
+		spinner.Fail()
 		return err
 	}
+	spinner.Success("Logged in Successfully")
 	return nil
 }
 
@@ -196,10 +208,10 @@ func NewClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.
 		return nil, err
 	}
 
-	authResponseJSON, err := os.ReadFile(path.Join(cacheDir, "auth.json"))
+	authResponseJSON, err := os.ReadFile(path.Join(cacheDir, CachedCredentialsFile))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, fmt.Errorf("could not find cached opensubtitle credential. Try subg login --provider os to login to opensubtitles.com")
+			return nil, fmt.Errorf("could not find cached opensubtitle credentials. Try subg login --provider os to login to opensubtitles.com")
 		}
 	}
 
@@ -230,6 +242,7 @@ func DownloadSubtitle(opts DownloadOptions) error {
 		opts.OutPutFile = fmt.Sprintf("%v.%v", file2Download.FileName, opts.Format)
 	}
 
+	opts.OutPutFile = path.Join(opts.OutPutDir, opts.OutPutFile)
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
 	if err != nil {
 		return err

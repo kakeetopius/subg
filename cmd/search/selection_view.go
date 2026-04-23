@@ -2,14 +2,16 @@
 package search
 
 import (
+	"errors"
 	"fmt"
-	"os"
 
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
 )
+
+var ErrUserQuit = errors.New("user quit")
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
@@ -77,7 +79,7 @@ func DisplaySubtitleTable(subtitles []opensubtitles.Subtitle) (*opensubtitles.Su
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(7),
+		table.WithHeight(10),
 		table.WithWidth(110),
 	)
 
@@ -106,7 +108,7 @@ func DisplaySubtitleTable(subtitles []opensubtitles.Subtitle) (*opensubtitles.Su
 		return nil, fmt.Errorf("could not get selected subtitle")
 	}
 	if finalModel.userQuit {
-		os.Exit(1)
+		return nil, ErrUserQuit
 	}
 
 	return subtitleObjByID(finalModel.selectedSubtitleID, subtitles)

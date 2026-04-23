@@ -1,7 +1,9 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/kakeetopius/subg/cmd/search"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
@@ -16,12 +18,12 @@ func SearchCmd() *cobra.Command {
 		subtitleFormat string
 		releaseYear    int
 		outputFile     string
+		outputDir      string
 		imdbID         int
 
 		movie      bool
 		serie      bool
 		autoSelect bool
-		all        bool
 	)
 	searchCmd := cobra.Command{
 		Use:     "search",
@@ -51,20 +53,33 @@ func SearchCmd() *cobra.Command {
 
 			subtitles, err := opensubtitles.SearchSubtitle(searchOptions)
 			if len(subtitles) < 1 {
-				return fmt.Errorf("no Results returned for -> %v", args[0])
+				if episode != 0 || season != 0 {
+					return fmt.Errorf("no results returned for %v Season %v Episode %v", args[0], season, episode)
+				}
+				return fmt.Errorf("no Results returned for %v", args[0])
 			}
 			if err != nil {
 				return err
 			}
 			selectedSubtitle, err := search.DisplaySubtitleTable(subtitles)
 			if err != nil {
+				if errors.Is(err, search.ErrUserQuit) {
+					return nil
+				}
 				return err
 			}
 
+			if outputDir == "" {
+				outputDir, err = os.Getwd()
+				if err != nil {
+					return err
+				}
+			}
 			err = opensubtitles.DownloadSubtitle(opensubtitles.DownloadOptions{
 				Subtitle:   selectedSubtitle,
 				Format:     subtitleFormat,
 				OutPutFile: outputFile,
+				OutPutDir:  outputDir,
 
 				APIKey:   config.GetString("opensubtitles.api_key"),
 				CacheDir: config.GetString("cache_dir"),
@@ -82,9 +97,9 @@ func SearchCmd() *cobra.Command {
 	searchCmd.Flags().IntVar(&episode, "episode", 0, "The episode number in a serie's season.")
 	searchCmd.Flags().StringVar(&subtitleFormat, "format", "srt", "The subtitle format to download.")
 	searchCmd.Flags().IntVar(&releaseYear, "year", 0, "The release year of the movie or show to reduce ambiguity.")
-	searchCmd.Flags().StringVar(&outputFile, "output", "", "The output file name for downloaded subtitle.")
+	searchCmd.Flags().StringVar(&outputFile, "output-file", "", "The output file name for downloaded subtitle.")
+	searchCmd.Flags().StringVar(&outputDir, "output-dir", "", "The output directory name for downloaded subtitle.")
 	searchCmd.Flags().IntVar(&imdbID, "imdb-id", 0, "Search for show or movie using imdb ID.")
-	searchCmd.Flags().BoolVar(&all, "all", false, "Download all the subtitles returned.(The number downloaded equals to --limit)")
 	searchCmd.Flags().BoolVar(&autoSelect, "auto", false, "Automatically select one subtitle to download without asking user.")
 	searchCmd.Flags().BoolVar(&movie, "movie", false, "Specifies that the query is a movie to reduce ambiguity")
 	searchCmd.Flags().BoolVar(&serie, "serie", false, "Specifies that the query is for a serie to reduce ambiguity")
