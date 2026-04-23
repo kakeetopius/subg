@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/kakeetopius/subg/cmd/search"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +57,11 @@ func SearchCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			DisplaySearchResults(subtitles)
+			selectedSubtitle, err := search.DisplaySubtitleTable(subtitles)
+			if err != nil {
+				return err
+			}
+			fmt.Println(selectedSubtitle)
 			return nil
 		},
 	}
@@ -76,19 +80,4 @@ func SearchCmd() *cobra.Command {
 	searchCmd.Flags().BoolVar(&movie, "movie", false, "Specifies that the query is a movie to reduce ambiguity")
 	searchCmd.Flags().BoolVar(&serie, "serie", false, "Specifies that the query is for a serie to reduce ambiguity")
 	return &searchCmd
-}
-
-func DisplaySearchResults(subtitles []opensubtitles.Subtitle) {
-	tableData := pterm.TableData{}
-	tableData = append(tableData, []string{"ID", "Name", "Lang", "Rating"})
-
-	for _, subtitle := range subtitles {
-		tableData = append(tableData, []string{
-			subtitle.SubtitleID,
-			subtitle.Release,
-			subtitle.Language,
-			fmt.Sprintf("%v", subtitle.Ratings),
-		})
-	}
-	pterm.DefaultTable.WithBoxed(true).WithHasHeader(true).WithHeaderRowSeparator("-").WithData(tableData).Render()
 }
