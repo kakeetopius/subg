@@ -52,6 +52,7 @@ func SearchCmd() *cobra.Command {
 			searchOptions.Type = featureType
 
 			subtitles, err := opensubtitles.SearchSubtitle(searchOptions)
+			fmt.Println(subtitles)
 			if len(subtitles) < 1 {
 				if episode != 0 || season != 0 {
 					return fmt.Errorf("no results returned for %v Season %v Episode %v", args[0], season, episode)
