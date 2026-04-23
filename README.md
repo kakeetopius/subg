@@ -77,9 +77,11 @@ subg login --provider <provider> [flags]
 
 <details>
 <summary>Flags</summary>
+
 - `--provider, -p` - Provider to authenticate to (currently: "os" for OpenSubtitles)
 - `--username, -u` - Account username
 - `--password, -P` - Account password
+
 </details>
 
 ## Configuration
@@ -122,5 +124,5 @@ cache_dir = "$HOME/.cache/subg"
 
 ## License
 
-MIT
+MIT  
 See [LICENSE](LICENSE) file for details.
