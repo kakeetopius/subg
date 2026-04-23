@@ -31,6 +31,10 @@ func SearchCmd() *cobra.Command {
 		Aliases: []string{"s"},
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			api := config.GetString("opensubtitles.api_key")
+			if api == "" {
+				return fmt.Errorf("open subtitle API Key not given. You can provide it with the --api-key flag or in the configuration file or via the environment variable OPENSUBTITLES_API_KEY ")
+			}
 			searchOptions := opensubtitles.SearchOptions{
 				Query:         args[0],
 				IMDBId:        imdbID,
@@ -39,7 +43,7 @@ func SearchCmd() *cobra.Command {
 				Languages:     subtitleLang,
 				Year:          releaseYear,
 
-				APIKey:   config.GetString("opensubtitles.api_key"),
+				APIKey:   api,
 				CacheDir: config.GetString("cache_dir"),
 			}
 			featureType := "all"
@@ -52,7 +56,6 @@ func SearchCmd() *cobra.Command {
 			searchOptions.Type = featureType
 
 			subtitles, err := opensubtitles.SearchSubtitle(searchOptions)
-			fmt.Println(subtitles)
 			if len(subtitles) < 1 {
 				if episode != 0 || season != 0 {
 					return fmt.Errorf("no results returned for %v Season %v Episode %v", args[0], season, episode)
