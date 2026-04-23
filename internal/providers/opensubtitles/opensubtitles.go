@@ -4,12 +4,17 @@ package opensubtitles
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"os"
 	"path"
 	"time"
 
 	"github.com/angelospk/opensubtitles-go"
 	"github.com/kakeetopius/subg/internal/util"
+	"github.com/pterm/pterm"
 )
 
 type LoginOptions struct {
@@ -33,9 +38,10 @@ type SearchOptions struct {
 }
 
 type DownloadOptions struct {
-	FileID   int
-	Format   string
-	FileName string
+	Subtitle   *Subtitle
+	FileID     int
+	Format     string
+	OutPutFile string
 
 	APIKey   string
 	CacheDir string
@@ -57,8 +63,6 @@ type SubtitleFeatureDetails struct {
 	FeatureType   string
 	Year          int
 	Title         string
-	IMBDId        int
-	TMDBId        int
 	SeasonNumber  int
 	EpisodeNumber int
 }
@@ -129,15 +133,23 @@ func SearchSubtitle(opts SearchOptions) ([]Subtitle, error) {
 	if opts.IMDBId != 0 {
 		searchParams.IMDbID = &opts.IMDBId
 	}
-	if opts.Type == "episode" {
+	if opts.SeasonNumber != 0 {
 		searchParams.SeasonNumber = &opts.SeasonNumber
+	}
+	if opts.EpisodeNumber != 0 {
 		searchParams.EpisodeNumber = &opts.EpisodeNumber
 	}
 
-	searchResp, err := client.SearchSubtitles(context.Background(), searchParams)
+	spinner, err := pterm.DefaultSpinner.Start("Retrieving subtitles.........")
 	if err != nil {
 		return nil, err
 	}
+	searchResp, err := client.SearchSubtitles(context.Background(), searchParams)
+	if err != nil {
+		spinner.Fail()
+		return nil, err
+	}
+	spinner.Success("Search Done")
 
 	subtitles := make([]Subtitle, 0, len(searchResp.Data))
 	for _, sub := range searchResp.Data {
@@ -154,8 +166,6 @@ func SearchSubtitle(opts SearchOptions) ([]Subtitle, error) {
 				FeatureType: sub.Attributes.FeatureDetails.FeatureType,
 				Year:        sub.Attributes.FeatureDetails.Year,
 				Title:       sub.Attributes.FeatureDetails.Title,
-				IMBDId:      *sub.Attributes.FeatureDetails.IMDbID,
-				TMDBId:      *sub.Attributes.FeatureDetails.TMDBID,
 			},
 		}
 		// The following two maybe nil when  dealing with movies
@@ -175,4 +185,85 @@ func SearchSubtitle(opts SearchOptions) ([]Subtitle, error) {
 		subtitles = append(subtitles, subtitleObj)
 	}
 	return subtitles, nil
+}
+
+func NewClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.Client, error) {
+	client, err := opensubtitles.NewClient(opensubtitles.Config{
+		ApiKey:    apiKey,
+		UserAgent: "",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	authResponseJSON, err := os.ReadFile(path.Join(cacheDir, "auth.json"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, fmt.Errorf("could not find cached opensubtitle credential. Try subg login --provider os to login to opensubtitles.com")
+		}
+	}
+
+	var authResp opensubtitles.LoginResponse
+	err = json.Unmarshal(authResponseJSON, &authResp)
+	if err != nil {
+		return nil, fmt.Errorf("error in auth file %v", err)
+	}
+
+	client.SetAuthToken(authResp.Token, authResp.BaseURL)
+	return client, nil
+}
+
+func DownloadSubtitle(opts DownloadOptions) error {
+	client, err := NewClientFromCachedConfigs(opts.APIKey, opts.CacheDir)
+	if err != nil {
+		return err
+	}
+	if len(opts.Subtitle.Files) == 0 {
+		return fmt.Errorf("no files to download for selected subtitle")
+	}
+	file2Download := opts.Subtitle.Files[0]
+	downloadRequest := opensubtitles.DownloadRequest{
+		FileID:    file2Download.FileID,
+		SubFormat: &opts.Format,
+	}
+	if opts.OutPutFile == "" {
+		opts.OutPutFile = fmt.Sprintf("%v.%v", file2Download.FileName, opts.Format)
+	}
+
+	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
+	if err != nil {
+		return err
+	}
+	downloadResp, err := client.Download(context.Background(), downloadRequest)
+	if err != nil {
+		spinner.Fail()
+		return err
+	}
+
+	httpclient := &http.Client{}
+	resp, err := httpclient.Get(downloadResp.Link)
+	if err != nil {
+		spinner.Fail()
+		return err
+	}
+	defer resp.Body.Close()
+
+	outFile, err := os.OpenFile(opts.OutPutFile, os.O_RDWR|os.O_CREATE, 0o644)
+	if err != nil {
+		spinner.Fail()
+		return err
+	}
+	defer outFile.Close()
+
+	_, err = io.Copy(outFile, resp.Body)
+	if err != nil {
+		spinner.Fail()
+		return err
+	}
+	spinner.Success("Download Done")
+
+	fmt.Printf("\nSubtitle downloaded successfully to: %v \n", opts.OutPutFile)
+	fmt.Printf("Remaining Downloads: %v\n", downloadResp.Remaining)
+	fmt.Printf("Reset Time: %v\n", downloadResp.ResetTime)
+	return nil
 }

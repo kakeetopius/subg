@@ -59,6 +59,7 @@ func DisplaySubtitleTable(subtitles []opensubtitles.Subtitle) (*opensubtitles.Su
 		{Title: "Name", Width: 72},
 		{Title: "Lang", Width: 10},
 		{Title: "Rating", Width: 10},
+		{Title: "Votes", Width: 10},
 	}
 
 	rows := []table.Row{}
@@ -68,6 +69,7 @@ func DisplaySubtitleTable(subtitles []opensubtitles.Subtitle) (*opensubtitles.Su
 			subtitle.Release,
 			subtitle.Language,
 			fmt.Sprintf("%v", subtitle.Ratings),
+			fmt.Sprintf("%v", subtitle.Votes),
 		})
 	}
 
@@ -76,7 +78,7 @@ func DisplaySubtitleTable(subtitles []opensubtitles.Subtitle) (*opensubtitles.Su
 		table.WithRows(rows),
 		table.WithFocused(true),
 		table.WithHeight(7),
-		table.WithWidth(100),
+		table.WithWidth(110),
 	)
 
 	s := table.DefaultStyles()
