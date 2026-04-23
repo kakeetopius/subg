@@ -4,15 +4,17 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	cfgFile string
-	config  *viper.Viper
-	apiKey  string
+	cfgFile  string
+	config   *viper.Viper
+	apiKey   string
+	cacheDir string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -35,10 +37,22 @@ func Execute() {
 }
 
 func init() {
+	config = viper.New()
+
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/subg.toml)")
 	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "API Key to subtitle provider.")
+	rootCmd.PersistentFlags().StringVar(&cacheDir, "cache-dir", "", "The directory to store cached information like JWT token")
 
-	viper.BindPFlag("api_key", rootCmd.Flags().Lookup("api-key"))
+	useConfigDir, err := os.UserCacheDir()
+	cobra.CheckErr(err)
+
+	rootCmd.PersistentFlags().MarkHidden("cache-dir")
+	config.BindPFlag("cache_dir", rootCmd.PersistentFlags().Lookup("cache-dir"))
+	config.SetDefault("cache_dir", path.Join(useConfigDir, "subg"))
+
+	apiKeyPflag := rootCmd.PersistentFlags().Lookup("api-key")
+	config.BindPFlag("opensubtitles.api_key", apiKeyPflag)
+	config.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
 
 	rootCmd.AddCommand(
 		SearchCmd(),
@@ -48,7 +62,6 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() error {
-	config = viper.New()
 	if cfgFile != "" {
 		// Use config file from the flag.
 		config.SetConfigFile(cfgFile)
@@ -66,14 +79,19 @@ func initConfig() error {
 		// Search config in home directory with name "subg" (without extension).
 		config.AddConfigPath(home)
 		config.AddConfigPath(configDir)
-		config.SetConfigType("toml")
+		config.AddConfigPath(path.Join(configDir, "subg"))
 		config.SetConfigName("subg")
+		config.SetConfigType("toml")
 	}
 
 	config.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := config.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			// if file not found no need to error.
+			return nil
+		}
 		return err
 	}
 
