@@ -32,7 +32,7 @@ You can sign up for a free OpenSubtitles account at [opensubtitles.com](https://
 
 ```bash
 # Search for a movie subtitle in English
-subg search "The Matrix" --lang en
+subg search "The Matrix"
 
 # Search for a TV series subtitle
 subg search "Breaking Bad" --season 1 --episode 5 --lang en
