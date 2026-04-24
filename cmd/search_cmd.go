@@ -59,7 +59,6 @@ func SearchCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Println("Reached here for some reason")
 
 			if len(subtitles) < 1 {
 				if episode != 0 || season != 0 {
