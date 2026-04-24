@@ -152,7 +152,7 @@ func SearchSubtitle(opts OpenSubSearchOptions) ([]OpenSubSubtitle, error) {
 		searchParams.EpisodeNumber = &opts.EpisodeNumber
 	}
 
-	spinner, err := pterm.DefaultSpinner.Start("Retrieving subtitles.........")
+	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on OpenSubtitles.........")
 	if err != nil {
 		return nil, err
 	}

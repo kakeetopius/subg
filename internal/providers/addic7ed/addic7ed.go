@@ -36,7 +36,7 @@ type SubtitleOption struct {
 }
 
 func SearchSubtitle(opts Addic7edSearchOptions) (Addic7edSubtitle, error) {
-	client := addic7ed.NewVerbose()
+	client := addic7ed.New()
 
 	showName := opts.Query
 	if opts.Season != 0 && opts.Episode != 0 {

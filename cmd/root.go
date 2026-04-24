@@ -11,10 +11,10 @@ import (
 )
 
 var (
-	cfgFile  string
-	config   *viper.Viper
-	apiKey   string
-	cacheDir string
+	cfgFile     string
+	viperConfig *viper.Viper
+	apiKey      string
+	cacheDir    string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -37,7 +37,7 @@ func Execute() {
 }
 
 func init() {
-	config = viper.New()
+	viperConfig = viper.New()
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/subg.toml)")
 	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "API Key to subtitle provider.")
@@ -47,13 +47,13 @@ func init() {
 	cobra.CheckErr(err)
 
 	rootCmd.PersistentFlags().MarkHidden("cache-dir")
-	config.BindPFlag("cache_dir", rootCmd.PersistentFlags().Lookup("cache-dir"))
-	config.SetDefault("cache_dir", path.Join(useConfigDir, "subg"))
+	viperConfig.BindPFlag("cache_dir", rootCmd.PersistentFlags().Lookup("cache-dir"))
+	viperConfig.SetDefault("cache_dir", path.Join(useConfigDir, "subg"))
 
 	rootCmd.PersistentFlags().MarkHidden("api-key")
 	apiKeyPflag := rootCmd.PersistentFlags().Lookup("api-key")
-	config.BindPFlag("opensubtitles.api_key", apiKeyPflag)
-	config.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
+	viperConfig.BindPFlag("opensubtitles.api_key", apiKeyPflag)
+	viperConfig.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
 
 	rootCmd.AddCommand(
 		SearchCmd(),
@@ -65,7 +65,7 @@ func init() {
 func initConfig() error {
 	if cfgFile != "" {
 		// Use config file from the flag.
-		config.SetConfigFile(cfgFile)
+		viperConfig.SetConfigFile(cfgFile)
 	} else {
 		// Find home directory.
 		home, err := os.UserHomeDir()
@@ -78,17 +78,17 @@ func initConfig() error {
 		}
 
 		// Search config in home directory with name "subg" (without extension).
-		config.AddConfigPath(home)
-		config.AddConfigPath(configDir)
-		config.AddConfigPath(path.Join(configDir, "subg"))
-		config.SetConfigName("subg")
-		config.SetConfigType("toml")
+		viperConfig.AddConfigPath(home)
+		viperConfig.AddConfigPath(configDir)
+		viperConfig.AddConfigPath(path.Join(configDir, "subg"))
+		viperConfig.SetConfigName("subg")
+		viperConfig.SetConfigType("toml")
 	}
 
-	config.AutomaticEnv() // read in environment variables that match
+	viperConfig.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
-	if err := config.ReadInConfig(); err != nil {
+	if err := viperConfig.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// if file not found no need to error.
 			return nil
@@ -96,6 +96,6 @@ func initConfig() error {
 		return err
 	}
 
-	fmt.Fprintln(os.Stderr, "Using config file:", config.ConfigFileUsed())
+	fmt.Fprintln(os.Stderr, "Using config file:", viperConfig.ConfigFileUsed())
 	return nil
 }

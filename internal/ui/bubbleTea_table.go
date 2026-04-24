@@ -1,5 +1,5 @@
-// Package search is used to search and download subtitles.
-package search
+// Package ui is used to display various ui componenets to the terminal.
+package ui
 
 import (
 	"errors"
@@ -19,9 +19,9 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 type model struct {
-	table              table.Model
-	selectedSubtitleID string
-	userQuit           bool
+	table         table.Model
+	selectedRowID string
+	userQuit      bool
 }
 
 func (m model) Init() tea.Cmd { return nil }
@@ -41,7 +41,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.userQuit = true
 			return m, tea.Quit
 		case "enter":
-			m.selectedSubtitleID = m.table.SelectedRow()[0]
+			m.selectedRowID = m.table.SelectedRow()[0]
 			return m, tea.Quit
 		}
 	}
@@ -93,7 +93,7 @@ func DisplayOpenSubTable(subtitles []opensubtitles.OpenSubSubtitle) (*opensubtit
 		return nil, ErrUserQuit
 	}
 
-	return openSubtitleObjByID(finalModel.selectedSubtitleID, subtitles)
+	return openSubtitleObjByID(finalModel.selectedRowID, subtitles)
 }
 
 func DisplayAddic7edTable(subs *addic7ed.Addic7edSubtitle) (*addic7ed.SubtitleOption, error) {
@@ -135,7 +135,7 @@ func DisplayAddic7edTable(subs *addic7ed.Addic7edSubtitle) (*addic7ed.SubtitleOp
 		return nil, ErrUserQuit
 	}
 
-	return addic7edSubtitleOptByID(finalModel.selectedSubtitleID, subs)
+	return addic7edSubtitleOptByID(finalModel.selectedRowID, subs)
 }
 
 func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, tableWidth int) (tea.Model, error) {
@@ -146,7 +146,7 @@ func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, ta
 		return nil, fmt.Errorf("table rows empty")
 	}
 
-	tableHeight := min(len(columns)+1, 10)
+	tableHeight := min(len(columns)+2, 10)
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
@@ -168,8 +168,8 @@ func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, ta
 	t.SetStyles(s)
 
 	m := model{
-		table:              t,
-		selectedSubtitleID: rows[0][idenifierIndex],
+		table:         t,
+		selectedRowID: rows[0][idenifierIndex],
 	}
 
 	return m, nil

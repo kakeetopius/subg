@@ -25,10 +25,10 @@ func LoginCmd() *cobra.Command {
 			switch provider {
 			case "os":
 				return opensubtitles.Login(opensubtitles.OpenSubLoginOptions{
-					UserName: config.GetString("opensubtitles.username"),
-					Password: config.GetString("opensubtitles.password"),
-					APIKey:   config.GetString("opensubtitles.api_key"),
-					CacheDir: config.GetString("cache_dir"),
+					UserName: viperConfig.GetString("opensubtitles.username"),
+					Password: viperConfig.GetString("opensubtitles.password"),
+					APIKey:   viperConfig.GetString("opensubtitles.api_key"),
+					CacheDir: viperConfig.GetString("cache_dir"),
 				})
 
 			default:
@@ -45,8 +45,8 @@ func LoginCmd() *cobra.Command {
 	userNamePflag := loginCmd.Flags().Lookup("username")
 	passwordPflag := loginCmd.Flags().Lookup("password")
 
-	config.BindPFlag("opensubtitles.username", userNamePflag)
-	config.BindPFlag("opensubtitles.password", passwordPflag)
+	viperConfig.BindPFlag("opensubtitles.username", userNamePflag)
+	viperConfig.BindPFlag("opensubtitles.password", passwordPflag)
 
 	return &loginCmd
 }
