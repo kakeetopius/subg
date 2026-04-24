@@ -33,61 +33,60 @@ func SearchCmd() *cobra.Command {
 		Short:   "Search and download subtitles for a movie or show.",
 		Aliases: []string{"s"},
 		Args:    cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			var err error
-			api := viperConfig.GetString("opensubtitles.api_key")
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			defer func() {
+				// if error is ui.ErrUserQuit no need to return it
+				if err != nil && errors.Is(err, ui.ErrUserQuit) {
+					err = nil
+				}
+			}()
+
+			providerToUse := viperConfig.GetString("provider")
+			query := args[0]
 			// Set the outputDir to current working directory if not given
 			if outputDir == "" {
 				outputDir, err = os.Getwd()
 				if err != nil {
-					return err
+					return
 				}
 			}
 
-			// Try downloading from open subtitles first
-			openSubtitleSearchOptions := opensubtitles.OpenSubSearchOptions{
-				Query:         args[0],
-				IMDBId:        imdbID,
-				SeasonNumber:  season,
-				EpisodeNumber: episode,
-				Languages:     subtitleLang,
-				Year:          releaseYear,
-
-				APIKey:   api,
-				CacheDir: viperConfig.GetString("cache_dir"),
+			switch providerToUse {
+			case "os":
+				return searchAndDownloadWithOpenSubtitles(query)
+			case "a7":
+				return searchAndDownloadWithAddic7ed(query)
+			default:
+				if providerToUse != "" {
+					return fmt.Errorf("unknown subtitle provider: %v", providerToUse)
+				}
 			}
-			err = searchAndDownloadWithOpenSubtitles(openSubtitleSearchOptions)
-			if err == nil || errors.Is(err, ui.ErrUserQuit) {
-				return nil
+
+			// If no provider was given try downloading from open subtitles first
+			err = searchAndDownloadWithOpenSubtitles(query)
+			if err == nil {
+				return
 			}
 
 			pterm.Error.Printf("Opensubtitles returned error: %v\n", err)
 			pterm.Info.Println("Trying addic7ed")
 
 			// Try addic7ed next if opensubtitles failed
-			addic7edSearchOptions := addic7ed.Addic7edSearchOptions{
-				Query:    args[0],
-				Language: subtitleLang,
-				Season:   season,
-				Episode:  episode,
-			}
-			err = searchAndDownloadWithAddic7ed(addic7edSearchOptions)
+			err = searchAndDownloadWithAddic7ed(query)
 			if err != nil {
-				if errors.Is(err, ui.ErrUserQuit) {
-					return nil
-				}
-				return err
+				pterm.Error.Println(err)
+				// We dont return the error because it is already printed
 			}
 			return nil
 		},
 	}
 
 	searchCmd.Flags().SortFlags = false
-	searchCmd.Flags().StringVar(&subtitleLang, "lang", "en", "The Language for the subtitle to get.")
-	searchCmd.Flags().IntVar(&season, "season", 0, "The serie's season if getting subtitles for a serie.")
-	searchCmd.Flags().IntVar(&episode, "episode", 0, "The episode number in a serie's season.")
-	searchCmd.Flags().StringVar(&subtitleFormat, "format", "srt", "The subtitle format to download.")
-	searchCmd.Flags().IntVar(&releaseYear, "year", 0, "The release year of the movie or show to reduce ambiguity.")
+	searchCmd.Flags().StringVarP(&subtitleLang, "lang", "l", "en", "The Language for the subtitle to get.")
+	searchCmd.Flags().IntVarP(&season, "season", "s", 0, "The serie's season if getting subtitles for a serie.")
+	searchCmd.Flags().IntVarP(&episode, "episode", "e", 0, "The episode number in a serie's season.")
+	searchCmd.Flags().StringVarP(&subtitleFormat, "format", "f", "srt", "The subtitle format to download.")
+	searchCmd.Flags().IntVarP(&releaseYear, "year", "y", 0, "The release year of the movie or show to reduce ambiguity.")
 	searchCmd.Flags().StringVar(&outputFile, "output-file", "", "The output file name for downloaded subtitle.")
 	searchCmd.Flags().StringVar(&outputDir, "output-dir", "", "The output directory name for downloaded subtitle.")
 	searchCmd.Flags().IntVar(&imdbID, "imdb-id", 0, "Search for show or movie using imdb ID.")
@@ -97,9 +96,22 @@ func SearchCmd() *cobra.Command {
 	return &searchCmd
 }
 
-func searchAndDownloadWithOpenSubtitles(searchOptions opensubtitles.OpenSubSearchOptions) error {
-	if searchOptions.APIKey == "" {
+func searchAndDownloadWithOpenSubtitles(query string) error {
+	api := viperConfig.GetString("opensubtitles.api_key")
+
+	if api == "" {
 		return fmt.Errorf("open subtitle API Key not given. You can provide it with the --api-key flag or in the configuration file or via the environment variable OPENSUBTITLES_API_KEY ")
+	}
+	searchOptions := opensubtitles.OpenSubSearchOptions{
+		Query:         query,
+		IMDBId:        imdbID,
+		SeasonNumber:  season,
+		EpisodeNumber: episode,
+		Languages:     subtitleLang,
+		Year:          releaseYear,
+
+		APIKey:   api,
+		CacheDir: viperConfig.GetString("cache_dir"),
 	}
 
 	// the featureTypes "all", "movie", "episode" is what is required by the opensubtitles wrapper.
@@ -147,7 +159,13 @@ func searchAndDownloadWithOpenSubtitles(searchOptions opensubtitles.OpenSubSearc
 	return nil
 }
 
-func searchAndDownloadWithAddic7ed(searchOptions addic7ed.Addic7edSearchOptions) error {
+func searchAndDownloadWithAddic7ed(query string) error {
+	searchOptions := addic7ed.Addic7edSearchOptions{
+		Query:    query,
+		Language: subtitleLang,
+		Season:   season,
+		Episode:  episode,
+	}
 	subs, err := addic7ed.SearchSubtitle(searchOptions)
 	if err != nil {
 		return err

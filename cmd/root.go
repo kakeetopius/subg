@@ -13,8 +13,6 @@ import (
 var (
 	cfgFile     string
 	viperConfig *viper.Viper
-	apiKey      string
-	cacheDir    string
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -22,6 +20,14 @@ var rootCmd = &cobra.Command{
 	Use:          "subg",
 	Short:        "A tool for searching and downloading movie, series subtitles.",
 	SilenceUsage: true,
+	Long: `A tool for searching and downloading movie, series subtitles.
+
+subg is capable of downloading subtitles from various subtitle providers.
+
+The following is the list of supported providers so far.
+  os:   opensubtitles.com
+  a7:   addic7ed.com
+`,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		return initConfig()
@@ -37,23 +43,31 @@ func Execute() {
 }
 
 func init() {
+	var (
+		apiKey   string
+		cacheDir string
+		provider string
+	)
+
 	viperConfig = viper.New()
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/subg.toml)")
-	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "API Key to subtitle provider.")
-	rootCmd.PersistentFlags().StringVar(&cacheDir, "cache-dir", "", "The directory to store cached information like JWT token")
 
-	useConfigDir, err := os.UserCacheDir()
+	userConfigDir, err := os.UserCacheDir()
 	cobra.CheckErr(err)
-
+	rootCmd.PersistentFlags().StringVar(&cacheDir, "cache-dir", "", "The directory to store cached information like JWT token")
 	rootCmd.PersistentFlags().MarkHidden("cache-dir")
 	viperConfig.BindPFlag("cache_dir", rootCmd.PersistentFlags().Lookup("cache-dir"))
-	viperConfig.SetDefault("cache_dir", path.Join(useConfigDir, "subg"))
+	viperConfig.SetDefault("cache_dir", path.Join(userConfigDir, "subg"))
 
+	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "API Key to subtitle provider.")
 	rootCmd.PersistentFlags().MarkHidden("api-key")
 	apiKeyPflag := rootCmd.PersistentFlags().Lookup("api-key")
 	viperConfig.BindPFlag("opensubtitles.api_key", apiKeyPflag)
 	viperConfig.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
+
+	rootCmd.PersistentFlags().StringVar(&provider, "provider", "", "The provider to use.")
+	viperConfig.BindPFlag("provider", rootCmd.PersistentFlags().Lookup("provider"))
 
 	rootCmd.AddCommand(
 		SearchCmd(),
