@@ -97,7 +97,7 @@ via the --provider flag or in the configuration file. (See Below)
 | opensubtitles.com | os   |
 | addic7ed.com      | a7   |
 
-> ![NOTE]
+> [!NOTE]
 > If a provider is not specified using the flag --provider or using the configuration file (See Below), all providers are tried in the order shown above.
 
 ## Configuration
