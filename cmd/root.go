@@ -26,6 +26,7 @@ subg is capable of downloading subtitles from various subtitle providers.
 
 The following is the list of supported providers so far.
   os:   opensubtitles.com
+  sd:	subdl.com
   a7:   addic7ed.com
 `,
 
@@ -64,6 +65,7 @@ func init() {
 	rootCmd.PersistentFlags().MarkHidden("api-key")
 	apiKeyPflag := rootCmd.PersistentFlags().Lookup("api-key")
 	viperConfig.BindPFlag("opensubtitles.api_key", apiKeyPflag)
+	viperConfig.BindPFlag("subdl.api_key", apiKeyPflag)
 	viperConfig.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
 
 	rootCmd.PersistentFlags().StringVar(&provider, "provider", "", "The provider to use.")

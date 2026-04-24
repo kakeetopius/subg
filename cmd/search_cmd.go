@@ -7,6 +7,7 @@ import (
 
 	"github.com/kakeetopius/subg/internal/providers/addic7ed"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
+	"github.com/kakeetopius/subg/internal/providers/subdl"
 	"github.com/kakeetopius/subg/internal/ui"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
@@ -22,8 +23,8 @@ var (
 	outputDir      string
 	imdbID         int
 
-	movie      bool
-	serie      bool
+	isMovie    bool
+	isSerie    bool
 	autoSelect bool
 )
 
@@ -56,6 +57,8 @@ func SearchCmd() *cobra.Command {
 				return searchAndDownloadWithOpenSubtitles(query)
 			case "a7":
 				return searchAndDownloadWithAddic7ed(query)
+			case "sd":
+				return searchAndDownloadWithSubdl(query)
 			default:
 				if providerToUse != "" {
 					return fmt.Errorf("unknown subtitle provider: %v", providerToUse)
@@ -69,9 +72,18 @@ func SearchCmd() *cobra.Command {
 			}
 
 			pterm.Error.Printf("Opensubtitles returned error: %v\n", err)
-			pterm.Info.Println("Trying addic7ed")
+			pterm.Info.Println("Trying subdl.com")
 
-			// Try addic7ed next if opensubtitles failed
+			// Try subdl next
+			err = searchAndDownloadWithSubdl(query)
+			if err == nil {
+				return
+			}
+
+			pterm.Error.Printf("subdl.com returned error: %v\n", err)
+			pterm.Info.Println("Trying addic7ed.com")
+
+			// Try addic7ed next
 			err = searchAndDownloadWithAddic7ed(query)
 			if err != nil {
 				pterm.Error.Println(err)
@@ -91,8 +103,8 @@ func SearchCmd() *cobra.Command {
 	searchCmd.Flags().StringVar(&outputDir, "output-dir", "", "The output directory name for downloaded subtitle.")
 	searchCmd.Flags().IntVar(&imdbID, "imdb-id", 0, "Search for show or movie using imdb ID.")
 	searchCmd.Flags().BoolVar(&autoSelect, "auto", false, "Automatically select one subtitle to download without asking user.")
-	searchCmd.Flags().BoolVar(&movie, "movie", false, "Specifies that the query is a movie to reduce ambiguity")
-	searchCmd.Flags().BoolVar(&serie, "serie", false, "Specifies that the query is for a serie to reduce ambiguity")
+	searchCmd.Flags().BoolVar(&isMovie, "movie", false, "Specifies that the query is a movie to reduce ambiguity")
+	searchCmd.Flags().BoolVar(&isSerie, "serie", false, "Specifies that the query is for a serie to reduce ambiguity")
 	return &searchCmd
 }
 
@@ -117,9 +129,9 @@ func searchAndDownloadWithOpenSubtitles(query string) error {
 	// the featureTypes "all", "movie", "episode" is what is required by the opensubtitles wrapper.
 	featureType := "all"
 	switch {
-	case movie:
+	case isMovie:
 		featureType = "movie"
-	case serie || season != 0 || episode != 0:
+	case isSerie || season != 0 || episode != 0:
 		// if a season or episode is given we assume it is a serie
 		featureType = "episode"
 	}
@@ -131,7 +143,7 @@ func searchAndDownloadWithOpenSubtitles(query string) error {
 	}
 
 	if len(subtitles) < 1 {
-		if episode != 0 || season != 0 {
+		if isSerie || episode != 0 || season != 0 {
 			return fmt.Errorf("no results returned for %v Season %v Episode %v", searchOptions.Query, season, episode)
 		}
 		return fmt.Errorf("no Results returned for %v", searchOptions.Query)
@@ -184,5 +196,60 @@ func searchAndDownloadWithAddic7ed(query string) error {
 		return err
 	}
 
+	return nil
+}
+
+func searchAndDownloadWithSubdl(query string) error {
+	searchOptions := subdl.SubDLSearchParams{
+		APIKey: viperConfig.GetString("subdl.api_key"),
+		Query:  &query,
+	}
+
+	featureType := "movie"
+	if isSerie || season != 0 || episode != 0 {
+		// if a season or episode is given we assume it is a serie
+		featureType = "tv"
+	}
+	searchOptions.Type = &featureType
+
+	if season != 0 {
+		searchOptions.SeasonNumber = &season
+	}
+	if episode != 0 {
+		searchOptions.EpisodeNumber = &episode
+	}
+	if imdbID != 0 {
+		searchOptions.IMDBId = &imdbID
+	}
+	if releaseYear != 0 {
+		searchOptions.Year = &releaseYear
+	}
+	if subtitleLang != "" {
+		searchOptions.Languages = &subtitleLang
+	}
+
+	results, err := subdl.SearchSubtitles(searchOptions)
+	if err != nil {
+		return err
+	}
+	if !results.Status || len(results.Results) == 0 || len(results.Subtitles) == 0 {
+		if isSerie || episode != 0 || season != 0 {
+			return fmt.Errorf("no results returned for %v Season %v Episode %v", query, season, episode)
+		}
+		return fmt.Errorf("no Results returned for %v", query)
+	}
+
+	sub, err := ui.DisplaySubDLTable(results.Subtitles)
+	if err != nil {
+		return err
+	}
+	err = subdl.DownloadSubtitle(subdl.SubDLDownloadOptions{
+		Subtitle:   sub,
+		OutPutDir:  outputDir,
+		OutPutFile: outputFile,
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }

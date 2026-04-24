@@ -275,8 +275,8 @@ func DownloadSubtitle(opts OpenSubDownloadOptions) error {
 	}
 	spinner.Success("Download Done")
 
-	fmt.Printf("\nSubtitle downloaded successfully to: %v \n", opts.OutPutFile)
-	fmt.Printf("Remaining Downloads: %v\n", downloadResp.Remaining)
-	fmt.Printf("Reset Time: %v\n", downloadResp.ResetTime)
+	pterm.Info.Printf("Subtitle downloaded successfully to: %v \n", opts.OutPutFile)
+	pterm.Info.Printf("Remaining Downloads: %v\n", downloadResp.Remaining)
+	pterm.Info.Printf("Reset Time: %v\n", downloadResp.ResetTime)
 	return nil
 }

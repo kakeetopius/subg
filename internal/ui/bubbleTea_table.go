@@ -10,6 +10,7 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/kakeetopius/subg/internal/providers/addic7ed"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
+	"github.com/kakeetopius/subg/internal/providers/subdl"
 )
 
 var ErrUserQuit = errors.New("user quit")
@@ -138,6 +139,48 @@ func DisplayAddic7edTable(subs *addic7ed.Addic7edSubtitle) (*addic7ed.SubtitleOp
 	return addic7edSubtitleOptByID(finalModel.selectedRowID, subs)
 }
 
+func DisplaySubDLTable(subs []subdl.SubDLSubtitle) (*subdl.SubDLSubtitle, error) {
+	if len(subs) == 0 {
+		return nil, fmt.Errorf("no subtitles returned by subdl")
+	}
+
+	columns := []table.Column{
+		{Title: "ID", Width: 5},
+		{Title: "Name", Width: 70},
+		{Title: "Lang", Width: 10},
+		{Title: "Author", Width: 15},
+	}
+
+	rows := []table.Row{}
+	for _, sub := range subs {
+		rows = append(rows, []string{
+			fmt.Sprint(sub.ID),
+			sub.ReleaseName,
+			sub.Lang,
+			sub.Author,
+		})
+	}
+
+	m, err := setUpTable(columns, rows, 0, 100)
+	if err != nil {
+		return nil, err
+	}
+	returnedModel, err := tea.NewProgram(m).Run()
+	if err != nil {
+		return nil, err
+	}
+
+	finalModel, ok := returnedModel.(model)
+	if !ok {
+		return nil, fmt.Errorf("could not get selected subtitle")
+	}
+	if finalModel.userQuit {
+		return nil, ErrUserQuit
+	}
+
+	return subdlSubByID(finalModel.selectedRowID, subs)
+}
+
 func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, tableWidth int) (tea.Model, error) {
 	if len(columns) == 0 {
 		return nil, fmt.Errorf("table columns empty")
@@ -187,7 +230,18 @@ func openSubtitleObjByID(id string, subtitles []opensubtitles.OpenSubSubtitle) (
 
 func addic7edSubtitleOptByID(id string, subtitle *addic7ed.Addic7edSubtitle) (*addic7ed.SubtitleOption, error) {
 	for _, sub := range subtitle.SubtitleOpts {
-		idStr := fmt.Sprint(id)
+		idStr := fmt.Sprint(sub.ID)
+		if idStr == id {
+			return &sub, nil
+		}
+	}
+
+	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
+}
+
+func subdlSubByID(id string, subtitles []subdl.SubDLSubtitle) (*subdl.SubDLSubtitle, error) {
+	for _, sub := range subtitles {
+		idStr := fmt.Sprint(sub.ID)
 		if idStr == id {
 			return &sub, nil
 		}

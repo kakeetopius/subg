@@ -100,7 +100,7 @@ func DownloadSubtitle(opts Addic7edDownloadOptions) error {
 	}
 
 	spinner.Success("Download Done.")
-	fmt.Println("Subtitle saved at: ", outPath)
+	pterm.Info.Println("Subtitle saved at: ", outPath)
 	return nil
 }
 
