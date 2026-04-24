@@ -8,6 +8,7 @@ import (
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/kakeetopius/subg/internal/providers/addic7ed"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
 )
 
@@ -52,7 +53,7 @@ func (m model) View() tea.View {
 	return tea.NewView(baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n")
 }
 
-func DisplaySubtitleTable(subtitles []opensubtitles.Subtitle) (*opensubtitles.Subtitle, error) {
+func DisplayOpenSubTable(subtitles []opensubtitles.OpenSubSubtitle) (*opensubtitles.OpenSubSubtitle, error) {
 	if len(subtitles) < 1 {
 		return nil, fmt.Errorf("subtitle results empty")
 	}
@@ -75,12 +76,83 @@ func DisplaySubtitleTable(subtitles []opensubtitles.Subtitle) (*opensubtitles.Su
 		})
 	}
 
+	m, err := setUpTable(columns, rows, 0, 110)
+	if err != nil {
+		return nil, err
+	}
+	returnedModel, err := tea.NewProgram(m).Run()
+	if err != nil {
+		return nil, err
+	}
+
+	finalModel, ok := returnedModel.(model)
+	if !ok {
+		return nil, fmt.Errorf("could not get selected subtitle")
+	}
+	if finalModel.userQuit {
+		return nil, ErrUserQuit
+	}
+
+	return openSubtitleObjByID(finalModel.selectedSubtitleID, subtitles)
+}
+
+func DisplayAddic7edTable(subs *addic7ed.Addic7edSubtitle) (*addic7ed.SubtitleOption, error) {
+	if len(subs.SubtitleOpts) == 0 {
+		return nil, fmt.Errorf("no subtitles returned by addic7ed")
+	}
+
+	columns := []table.Column{
+		{Title: "ID", Width: 5},
+		{Title: "Name", Width: 70},
+		{Title: "Lang", Width: 10},
+		{Title: "Version", Width: 10},
+	}
+
+	rows := []table.Row{}
+	for _, sub := range subs.SubtitleOpts {
+		rows = append(rows, []string{
+			fmt.Sprint(sub.ID),
+			subs.Name,
+			sub.Language,
+			sub.Version,
+		})
+	}
+
+	m, err := setUpTable(columns, rows, 0, 95)
+	if err != nil {
+		return nil, err
+	}
+	returnedModel, err := tea.NewProgram(m).Run()
+	if err != nil {
+		return nil, err
+	}
+
+	finalModel, ok := returnedModel.(model)
+	if !ok {
+		return nil, fmt.Errorf("could not get selected subtitle")
+	}
+	if finalModel.userQuit {
+		return nil, ErrUserQuit
+	}
+
+	return addic7edSubtitleOptByID(finalModel.selectedSubtitleID, subs)
+}
+
+func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, tableWidth int) (tea.Model, error) {
+	if len(columns) == 0 {
+		return nil, fmt.Errorf("table columns empty")
+	}
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("table rows empty")
+	}
+
+	tableHeight := min(len(columns)+1, 10)
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),
 		table.WithFocused(true),
-		table.WithHeight(10),
-		table.WithWidth(110),
+		table.WithHeight(tableHeight),
+		table.WithWidth(tableWidth),
 	)
 
 	s := table.DefaultStyles()
@@ -97,29 +169,29 @@ func DisplaySubtitleTable(subtitles []opensubtitles.Subtitle) (*opensubtitles.Su
 
 	m := model{
 		table:              t,
-		selectedSubtitleID: rows[0][0],
-	}
-	returnedModel, err := tea.NewProgram(m).Run()
-	if err != nil {
-		return nil, err
-	}
-	finalModel, ok := returnedModel.(model)
-	if !ok {
-		return nil, fmt.Errorf("could not get selected subtitle")
-	}
-	if finalModel.userQuit {
-		return nil, ErrUserQuit
+		selectedSubtitleID: rows[0][idenifierIndex],
 	}
 
-	return subtitleObjByID(finalModel.selectedSubtitleID, subtitles)
+	return m, nil
 }
 
-func subtitleObjByID(id string, subtitles []opensubtitles.Subtitle) (*opensubtitles.Subtitle, error) {
+func openSubtitleObjByID(id string, subtitles []opensubtitles.OpenSubSubtitle) (*opensubtitles.OpenSubSubtitle, error) {
 	for _, sub := range subtitles {
 		if sub.SubtitleID == id {
 			return &sub, nil
 		}
 	}
 
-	return nil, fmt.Errorf("subtitle with id %v not found in array", id)
+	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
+}
+
+func addic7edSubtitleOptByID(id string, subtitle *addic7ed.Addic7edSubtitle) (*addic7ed.SubtitleOption, error) {
+	for _, sub := range subtitle.SubtitleOpts {
+		idStr := fmt.Sprint(id)
+		if idStr == id {
+			return &sub, nil
+		}
+	}
+
+	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
 }

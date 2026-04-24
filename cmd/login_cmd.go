@@ -24,7 +24,7 @@ func LoginCmd() *cobra.Command {
 			}
 			switch provider {
 			case "os":
-				return opensubtitles.Login(opensubtitles.LoginOptions{
+				return opensubtitles.Login(opensubtitles.OpenSubLoginOptions{
 					UserName: config.GetString("opensubtitles.username"),
 					Password: config.GetString("opensubtitles.password"),
 					APIKey:   config.GetString("opensubtitles.api_key"),

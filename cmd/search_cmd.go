@@ -1,12 +1,13 @@
 package cmd
 
 import (
-	"errors"
+	// "errors"
 	"fmt"
 	"os"
 
 	"github.com/kakeetopius/subg/cmd/search"
-	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
+	"github.com/kakeetopius/subg/internal/providers/addic7ed"
+	// "github.com/kakeetopius/subg/internal/providers/opensubtitles"
 	"github.com/spf13/cobra"
 )
 
@@ -31,67 +32,93 @@ func SearchCmd() *cobra.Command {
 		Aliases: []string{"s"},
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			var err error
 			api := config.GetString("opensubtitles.api_key")
 			if api == "" {
 				return fmt.Errorf("open subtitle API Key not given. You can provide it with the --api-key flag or in the configuration file or via the environment variable OPENSUBTITLES_API_KEY ")
 			}
-			searchOptions := opensubtitles.SearchOptions{
-				Query:         args[0],
-				IMDBId:        imdbID,
-				SeasonNumber:  season,
-				EpisodeNumber: episode,
-				Languages:     subtitleLang,
-				Year:          releaseYear,
-
-				APIKey:   api,
-				CacheDir: config.GetString("cache_dir"),
-			}
-			featureType := "all"
-			switch {
-			case movie:
-				featureType = "movie"
-			case serie:
-				featureType = "episode"
-			}
-			searchOptions.Type = featureType
-
-			subtitles, err := opensubtitles.SearchSubtitle(searchOptions)
-			if err != nil {
-				return err
-			}
-
-			if len(subtitles) < 1 {
-				if episode != 0 || season != 0 {
-					return fmt.Errorf("no results returned for %v Season %v Episode %v", args[0], season, episode)
-				}
-				return fmt.Errorf("no Results returned for %v", args[0])
-			}
-			selectedSubtitle, err := search.DisplaySubtitleTable(subtitles)
-			if err != nil {
-				if errors.Is(err, search.ErrUserQuit) {
-					return nil
-				}
-				return err
-			}
-
+			// searchOptions := opensubtitles.OpenSubSearchOptions{
+			// 	Query:         args[0],
+			// 	IMDBId:        imdbID,
+			// 	SeasonNumber:  season,
+			// 	EpisodeNumber: episode,
+			// 	Languages:     subtitleLang,
+			// 	Year:          releaseYear,
+			//
+			// 	APIKey:   api,
+			// 	CacheDir: config.GetString("cache_dir"),
+			// }
+			// featureType := "all"
+			// switch {
+			// case movie:
+			// 	featureType = "movie"
+			// case serie:
+			// 	featureType = "episode"
+			// }
+			// searchOptions.Type = featureType
+			//
+			// subtitles, err := opensubtitles.SearchSubtitle(searchOptions)
+			// if err != nil {
+			// 	return err
+			// }
+			//
+			// if len(subtitles) < 1 {
+			// 	if episode != 0 || season != 0 {
+			// 		return fmt.Errorf("no results returned for %v Season %v Episode %v", args[0], season, episode)
+			// 	}
+			// 	return fmt.Errorf("no Results returned for %v", args[0])
+			// }
+			// selectedSubtitle, err := search.DisplayOpenSubTable(subtitles)
+			// if err != nil {
+			// 	if errors.Is(err, search.ErrUserQuit) {
+			// 		return nil
+			// 	}
+			// 	return err
+			// }
+			//
 			if outputDir == "" {
 				outputDir, err = os.Getwd()
 				if err != nil {
 					return err
 				}
 			}
-			err = opensubtitles.DownloadSubtitle(opensubtitles.DownloadOptions{
-				Subtitle:   selectedSubtitle,
-				Format:     subtitleFormat,
-				OutPutFile: outputFile,
-				OutPutDir:  outputDir,
+			searchOptions := addic7ed.Addic7edSearchOptions{
+				Query:    args[0],
+				Language: subtitleLang,
+				Season:   season,
+				Episode:  episode,
+			}
 
-				APIKey:   config.GetString("opensubtitles.api_key"),
-				CacheDir: config.GetString("cache_dir"),
+			subs, err := addic7ed.SearchSubtitle(searchOptions)
+			if err != nil {
+				return err
+			}
+			selected, err := search.DisplayAddic7edTable(&subs)
+			if err != nil {
+				return err
+			}
+			fmt.Println(selected)
+
+			err = addic7ed.DownloadSubtitle(addic7ed.Addic7edDownloadOptions{
+				Subtitle:   *selected,
+				OutPutFile: subs.Name,
+				OutPutDir:  outputDir,
 			})
 			if err != nil {
 				return err
 			}
+			// err = opensubtitles.DownloadSubtitle(opensubtitles.OpenSubDownloadOptions{
+			// 	Subtitle:   selectedSubtitle,
+			// 	Format:     subtitleFormat,
+			// 	OutPutFile: outputFile,
+			// 	OutPutDir:  outputDir,
+			//
+			// 	APIKey:   config.GetString("opensubtitles.api_key"),
+			// 	CacheDir: config.GetString("cache_dir"),
+			// })
+			// if err != nil {
+			// 	return err
+			// }
 			return nil
 		},
 	}

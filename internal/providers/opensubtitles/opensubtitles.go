@@ -19,14 +19,14 @@ import (
 
 var CachedCredentialsFile = "auth.json"
 
-type LoginOptions struct {
+type OpenSubLoginOptions struct {
 	UserName string
 	Password string
 	APIKey   string
 	CacheDir string
 }
 
-type SearchOptions struct {
+type OpenSubSearchOptions struct {
 	Query         string
 	IMDBId        int
 	SeasonNumber  int
@@ -39,8 +39,8 @@ type SearchOptions struct {
 	CacheDir string
 }
 
-type DownloadOptions struct {
-	Subtitle   *Subtitle
+type OpenSubDownloadOptions struct {
+	Subtitle   *OpenSubSubtitle
 	FileID     int
 	Format     string
 	OutPutFile string
@@ -49,7 +49,7 @@ type DownloadOptions struct {
 	APIKey   string
 	CacheDir string
 }
-type Subtitle struct {
+type OpenSubSubtitle struct {
 	SubtitleID     string
 	Release        string
 	Votes          int
@@ -75,7 +75,7 @@ type SubtitleFile struct {
 	FileName string
 }
 
-func Login(opts LoginOptions) error {
+func Login(opts OpenSubLoginOptions) error {
 	if opts.UserName == "" {
 		return fmt.Errorf("username cannot be empty")
 	} else if opts.Password == "" {
@@ -125,7 +125,7 @@ func Login(opts LoginOptions) error {
 	return nil
 }
 
-func SearchSubtitle(opts SearchOptions) ([]Subtitle, error) {
+func SearchSubtitle(opts OpenSubSearchOptions) ([]OpenSubSubtitle, error) {
 	client, err := opensubtitles.NewClient(opensubtitles.Config{
 		ApiKey:    opts.APIKey,
 		UserAgent: "",
@@ -163,9 +163,9 @@ func SearchSubtitle(opts SearchOptions) ([]Subtitle, error) {
 	}
 	spinner.Success("Search Done")
 
-	subtitles := make([]Subtitle, 0, len(searchResp.Data))
+	subtitles := make([]OpenSubSubtitle, 0, len(searchResp.Data))
 	for _, sub := range searchResp.Data {
-		subtitleObj := Subtitle{
+		subtitleObj := OpenSubSubtitle{
 			SubtitleID: sub.Attributes.SubtitleID,
 			Release:    sub.Attributes.Release,
 			Votes:      sub.Attributes.Votes,
@@ -225,7 +225,7 @@ func NewClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.
 	return client, nil
 }
 
-func DownloadSubtitle(opts DownloadOptions) error {
+func DownloadSubtitle(opts OpenSubDownloadOptions) error {
 	client, err := NewClientFromCachedConfigs(opts.APIKey, opts.CacheDir)
 	if err != nil {
 		return err
