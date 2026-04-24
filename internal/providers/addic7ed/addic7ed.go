@@ -40,6 +40,7 @@ func SearchSubtitle(opts Addic7edSearchOptions) (Addic7edSubtitle, error) {
 
 	showName := opts.Query
 	if opts.Season != 0 && opts.Episode != 0 {
+		// Example format for show name is "Game of Thrones 4 x 9" - Season 4 episode 9 of GOT
 		showName = fmt.Sprintf("%v - %v x %v", showName, opts.Season, opts.Episode)
 	}
 
