@@ -7,7 +7,7 @@ A command-line tool for searching and downloading movie and TV series subtitles.
 - Search for subtitles by movie/series name, IMDB ID, or other criteria
 - Filter by language, release year, season, and episode
 - Download subtitles in multiple formats (SRT, VTT, etc.)
-- Fallback to other subtitle providers in case Open Subtitles fails. (addic7ed only so far)
+- Fallback to other subtitle providers in case Open Subtitles fails. (A few so far. See Below)
 - Support for both movies and TV series
 - Automatic subtitle selection (not yet implemented)
 
@@ -17,9 +17,23 @@ A command-line tool for searching and downloading movie and TV series subtitles.
 go install github.com/kakeetopius/subg@latest
 ```
 
+## Subtitle Providers
+
+subg can download subtitles from different providers. The following is a list of supported providers in order of priority together with their codes that can be passed
+via the --provider flag or in the configuration file. (See Below)
+
+| Provider          | Code |
+| ----------------- | ---- |
+| opensubtitles.com | os   |
+| subdl.com         | sd   |
+| addic7ed.com      | a7   |
+
+> [!NOTE]
+> If a provider is not specified using the flag --provider or using the configuration file (See Below), all providers are tried in the order shown above.
+
 ## Quick Start
 
-### 1. Login to OpenSubtitles
+### 1. Login to Provider
 
 Before you can search and download subtitles specifically using Open Subtitles, you must authenticate with OpenSubtitles:
 
@@ -27,7 +41,9 @@ Before you can search and download subtitles specifically using Open Subtitles, 
 subg login --provider os --username <your_username> --password <your_password>
 ```
 
-You can sign up for a free OpenSubtitles account at [opensubtitles.com](https://www.opensubtitles.com/).
+- You can sign up for a free OpenSubtitles account at [opensubtitles.com](https://www.opensubtitles.com/).
+- For the provider subdl.com only the api key is required. It can be obtained here [subdl.com](https://subdl.com/).
+- For the provider addic7ed.com no login or api key is required.
 
 ### 2. Search and Download Subtitles
 
@@ -87,19 +103,6 @@ subg login --provider <provider> [flags]
 
 </details>
 
-## Subtitle Providers
-
-subg can download subtitles from different providers. The following is a list of supported providers in order of priority together with their codes that can be passed
-via the --provider flag or in the configuration file. (See Below)
-
-| Provider          | Code |
-| ----------------- | ---- |
-| opensubtitles.com | os   |
-| addic7ed.com      | a7   |
-
-> [!NOTE]
-> If a provider is not specified using the flag --provider or using the configuration file (See Below), all providers are tried in the order shown above.
-
 ## Configuration
 
 Configuration can be set via:
@@ -134,16 +137,21 @@ provider = "a7"
 cache_dir = "$HOME/.cache/subg"
 
 [opensubtitles]
-#NOTE that the opensubtitles api key is required if using opensubtitles to download. It can be set here or passed via the --api-key flag.
+#NOTE that the opensubtitles api key is required if using opensubtitles to search and download. It can be set here or passed via the --api-key flag.
 api_key = "your-api-key-here"
 #The username and password are used when logging in to opensubtitles. They can be set here or can be passed via corresponding flags.
 username = "your-username"
 password = "your-password"
+
+[subdl]
+#NOTE that for subdl.com only the api key is required for both search and download. It can be set here or passed via the --api-key flag.
+api_key = "subdl_api_key"
 ```
 
 ### Environment Variables
 
 - `OPENSUBTITLES_API_KEY` - You can also set API key for OpenSubtitles using this environment variable instead of passing it via a flag or putting it in the configuration file.
+- `SUBDL_API_KEY` - The subdl api key can also be set using this environment variable.
 
 ## Future Plans
 
