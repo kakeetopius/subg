@@ -49,13 +49,13 @@ subg login --provider os --username <your_username> --password <your_password>
 
 ```bash
 # Search for a movie subtitle in English
-subg search "The Matrix"
+subg search "In the Heights"
 
 # Search for a TV series subtitle
-subg search "Breaking Bad" --season 1 --episode 5 --lang en
+subg search "Bridge and Tunnel" --season 1 --episode 5 --lang en
 
 # Download with custom output
-subg search "Inception" --lang en --output-file Inception.srt --output-dir ./subtitles
+subg search "Grown Ups 2" --lang en --output-file GU2.srt --output-dir ./subtitles
 ```
 
 ## Usage
