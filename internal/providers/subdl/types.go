@@ -1,7 +1,11 @@
 // Package subdl is used to search for subtitles from subdl.com
 package subdl
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/kakeetopius/subg/internal/providers"
+)
 
 type SearchParams struct {
 	Query           *string `url:"film_name,omitempty"`
@@ -33,7 +37,7 @@ type SubtitleFeature struct {
 	Year         int     `json:"year"`
 }
 
-type Subtitle struct {
+type SDSubtitle struct {
 	Name            string `json:"name"`
 	ID              int    `json:"-"` // not part of subdl api
 	ReleaseName     string `json:"release_name"`
@@ -51,7 +55,7 @@ type Subtitle struct {
 }
 
 type DownloadOptions struct {
-	Subtitle   *Subtitle
+	Subtitle   *SDSubtitle
 	OutPutFile string
 	OutPutDir  string
 }
@@ -59,12 +63,12 @@ type DownloadOptions struct {
 type SearchResults struct {
 	Status      bool              `json:"status"`
 	Results     []SubtitleFeature `json:"results"`
-	Subtitles   []Subtitle        `json:"subtitles"`
+	Subtitles   []SDSubtitle      `json:"subtitles"`
 	TotalPages  int               `json:"totalPages"`
 	CurrentPage int               `json:"currentPage"`
 }
 
-func (r *SearchResults) SubtitleByID(id string) (any, error) {
+func (r *SearchResults) SubtitleByID(id string) (providers.Subtitle, error) {
 	for _, sub := range r.Subtitles {
 		idStr := fmt.Sprint(sub.ID)
 		if idStr == id {
@@ -73,4 +77,15 @@ func (r *SearchResults) SubtitleByID(id string) (any, error) {
 	}
 
 	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
+}
+
+func (s *SDSubtitle) Download(dlOpts any) error {
+	var opts DownloadOptions
+	var ok bool
+	if opts, ok = dlOpts.(DownloadOptions); !ok {
+		return fmt.Errorf("wrong download options given")
+	}
+	opts.Subtitle = s
+
+	return DownloadSubtitle(opts)
 }

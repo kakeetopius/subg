@@ -155,8 +155,7 @@ func searchAndDownloadWithOpenSubtitles(query string) error {
 		}
 		return err
 	}
-	err = opensubtitles.DownloadSubtitle(opensubtitles.DownloadOptions{
-		Subtitle:   selectedSubtitle,
+	err = selectedSubtitle.Download(opensubtitles.DownloadOptions{
 		Format:     subtitleFormat,
 		OutPutFile: outputFile,
 		OutPutDir:  outputDir,
@@ -187,8 +186,7 @@ func searchAndDownloadWithAddic7ed(query string) error {
 		return err
 	}
 
-	err = addic7ed.DownloadSubtitle(addic7ed.DownloadOptions{
-		Subtitle:   *selected,
+	err = selected.Download(addic7ed.DownloadOptions{
 		OutPutFile: subs.Name,
 		OutPutDir:  outputDir,
 	})
@@ -240,12 +238,11 @@ func searchAndDownloadWithSubdl(query string) error {
 		return fmt.Errorf("no Results returned for %v", query)
 	}
 
-	sub, err := ui.DisplaySubDLTable(results)
+	selectedSub, err := ui.DisplaySubDLTable(results)
 	if err != nil {
 		return err
 	}
-	err = subdl.DownloadSubtitle(subdl.DownloadOptions{
-		Subtitle:   sub,
+	err = selectedSub.Download(subdl.DownloadOptions{
 		OutPutDir:  outputDir,
 		OutPutFile: outputFile,
 	})

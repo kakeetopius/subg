@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 
+	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/matcornic/addic7ed"
 	"github.com/pterm/pterm"
 )
@@ -17,28 +18,26 @@ type SearchOptions struct {
 }
 
 type DownloadOptions struct {
-	Subtitle SubtitleOption
+	Subtitle A7Subtitle
 
 	OutPutFile string
 	OutPutDir  string
 }
 
-type SubtitleOption struct {
+type A7Subtitle struct {
 	ID       int
 	Language string
 	Version  string
 	Link     string
 }
 
-type Subtitle struct {
-	Name         string
-	SubtitleOpts []SubtitleOption
+type SearchResult struct {
+	Name      string
+	Subtitles []A7Subtitle
 }
 
-type SearchResult Subtitle
-
-func (r SearchResult) SubtitleByID(id string) (any, error) {
-	for _, sub := range r.SubtitleOpts {
+func (r SearchResult) SubtitleByID(id string) (providers.Subtitle, error) {
+	for _, sub := range r.Subtitles {
 		idStr := fmt.Sprint(sub.ID)
 		if idStr == id {
 			return &sub, nil
@@ -46,6 +45,17 @@ func (r SearchResult) SubtitleByID(id string) (any, error) {
 	}
 
 	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
+}
+
+func (s *A7Subtitle) Download(dlOpts any) error {
+	var opts DownloadOptions
+	var ok bool
+	if opts, ok = dlOpts.(DownloadOptions); !ok {
+		return fmt.Errorf("wrong download options given")
+	}
+
+	opts.Subtitle = *s
+	return DownloadSubtitle(opts)
 }
 
 func SearchSubtitle(opts SearchOptions) (SearchResult, error) {
@@ -73,13 +83,13 @@ func SearchSubtitle(opts SearchOptions) (SearchResult, error) {
 	}
 
 	subtitle := SearchResult{
-		Name:         show.Name,
-		SubtitleOpts: make([]SubtitleOption, 0, len(show.Subtitles)),
+		Name:      show.Name,
+		Subtitles: make([]A7Subtitle, 0, len(show.Subtitles)),
 	}
 
 	id := 1000
 	for _, sub := range show.Subtitles {
-		subtitle.SubtitleOpts = append(subtitle.SubtitleOpts, SubtitleOption{
+		subtitle.Subtitles = append(subtitle.Subtitles, A7Subtitle{
 			ID:       id,
 			Language: sub.Language,
 			Version:  sub.Version,

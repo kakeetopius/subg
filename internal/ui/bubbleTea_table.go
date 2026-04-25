@@ -17,9 +17,13 @@ var baseStyle = lipgloss.NewStyle().
 	BorderForeground(lipgloss.Color("240"))
 
 type model struct {
-	table         table.Model
+	table table.Model
+	// selectedRowID is to identify which row was chosen when the final model is returned.
 	selectedRowID string
-	userQuit      bool
+	// identifierColumn is to determine which column will be used to set the selectedRowID
+	identifierColumn int
+	// userQuit is to signal that the user did not select any row but just quit!
+	userQuit bool
 }
 
 func (m model) Init() tea.Cmd { return nil }
@@ -39,7 +43,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.userQuit = true
 			return m, tea.Quit
 		case "enter":
-			m.selectedRowID = m.table.SelectedRow()[0]
+			m.selectedRowID = m.table.SelectedRow()[m.identifierColumn]
 			return m, tea.Quit
 		}
 	}
@@ -51,7 +55,7 @@ func (m model) View() tea.View {
 	return tea.NewView(baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n")
 }
 
-func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, tableWidth int) (tea.Model, error) {
+func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int) (tea.Model, error) {
 	if len(columns) == 0 {
 		return nil, fmt.Errorf("table columns empty")
 	}
@@ -65,7 +69,7 @@ func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, ta
 		table.WithRows(rows),
 		table.WithFocused(true),
 		table.WithHeight(tableHeight),
-		table.WithWidth(tableWidth),
+		table.WithWidth(tableWidth(columns)),
 	)
 
 	s := table.DefaultStyles()
@@ -80,10 +84,23 @@ func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, ta
 		Bold(false)
 	t.SetStyles(s)
 
+	if idenifierIndex >= len(rows[0]) {
+		return nil, fmt.Errorf("invalid identifier index")
+	}
+
 	m := model{
-		table:         t,
-		selectedRowID: rows[0][idenifierIndex],
+		table:            t,
+		identifierColumn: idenifierIndex,
+		selectedRowID:    rows[0][idenifierIndex],
 	}
 
 	return m, nil
+}
+
+func tableWidth(columns []table.Column) int {
+	width := 0
+	for _, col := range columns {
+		width += col.Width
+	}
+	return width
 }

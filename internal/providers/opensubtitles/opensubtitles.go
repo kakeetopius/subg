@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/angelospk/opensubtitles-go"
+	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
 )
@@ -40,7 +41,7 @@ type SearchOptions struct {
 }
 
 type DownloadOptions struct {
-	Subtitle   *Subtitle
+	Subtitle   *OSSubtitle
 	FileID     int
 	Format     string
 	OutPutFile string
@@ -49,7 +50,7 @@ type DownloadOptions struct {
 	APIKey   string
 	CacheDir string
 }
-type Subtitle struct {
+type OSSubtitle struct {
 	SubtitleID     string
 	Release        string
 	Votes          int
@@ -75,9 +76,9 @@ type SubtitleFile struct {
 	FileName string
 }
 
-type SearchResults []Subtitle
+type SearchResults []OSSubtitle
 
-func (r SearchResults) SubtitleByID(id string) (any, error) {
+func (r SearchResults) SubtitleByID(id string) (providers.Subtitle, error) {
 	for _, sub := range r {
 		if sub.SubtitleID == id {
 			return &sub, nil
@@ -85,6 +86,17 @@ func (r SearchResults) SubtitleByID(id string) (any, error) {
 	}
 
 	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
+}
+
+func (s *OSSubtitle) Download(opts any) error {
+	var dlOpts DownloadOptions
+	var ok bool
+	if dlOpts, ok = opts.(DownloadOptions); !ok {
+		return fmt.Errorf("wrong download options given")
+	}
+
+	dlOpts.Subtitle = s
+	return DownloadSubtitle(dlOpts)
 }
 
 func Login(opts LoginOptions) error {
@@ -138,6 +150,7 @@ func Login(opts LoginOptions) error {
 }
 
 func SearchSubtitle(opts SearchOptions) (SearchResults, error) {
+	// To search from opensubtitles the user only needs an api key no need for login
 	client, err := opensubtitles.NewClient(opensubtitles.Config{
 		ApiKey:    opts.APIKey,
 		UserAgent: "",
@@ -175,9 +188,9 @@ func SearchSubtitle(opts SearchOptions) (SearchResults, error) {
 	}
 	spinner.Success("Search Done")
 
-	subtitles := make([]Subtitle, 0, len(searchResp.Data))
+	subtitles := make([]OSSubtitle, 0, len(searchResp.Data))
 	for _, sub := range searchResp.Data {
-		subtitleObj := Subtitle{
+		subtitleObj := OSSubtitle{
 			SubtitleID: sub.Attributes.SubtitleID,
 			Release:    sub.Attributes.Release,
 			Votes:      sub.Attributes.Votes,
@@ -238,6 +251,7 @@ func NewClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.
 }
 
 func DownloadSubtitle(opts DownloadOptions) error {
+	// To download from opensubtitles the user must have already logged in a session info cached.
 	client, err := NewClientFromCachedConfigs(opts.APIKey, opts.CacheDir)
 	if err != nil {
 		return err

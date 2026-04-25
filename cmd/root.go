@@ -24,7 +24,7 @@ var rootCmd = &cobra.Command{
 
 subg is capable of downloading subtitles from various subtitle providers.
 
-The following is the list of supported providers so far.
+The following is the list of supported providers so far in order of priority.
   os:   opensubtitles.com
   sd:	subdl.com
   a7:   addic7ed.com

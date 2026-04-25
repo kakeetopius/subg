@@ -2,5 +2,9 @@
 package providers
 
 type SubtitleSearchResult interface {
-	SubtitleByID(id string) (any, error)
+	SubtitleByID(id string) (Subtitle, error)
+}
+
+type Subtitle interface {
+	Download(downloadOptions any) error
 }
