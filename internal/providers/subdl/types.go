@@ -1,7 +1,9 @@
 // Package subdl is used to search for subtitles from subdl.com
 package subdl
 
-type SubDLSearchParams struct {
+import "fmt"
+
+type SearchParams struct {
 	Query           *string `url:"film_name,omitempty"`
 	FileName        *string `url:"file_name,omitempty"`
 	SubDLID         *int    `url:"sd_id,omitempty"`
@@ -20,15 +22,7 @@ type SubDLSearchParams struct {
 	APIKey          string  `url:"api_key,omitempty"`
 }
 
-type SubDLSearchResults struct {
-	Status      bool                   `json:"status"`
-	Results     []SubDLSubtitleFeature `json:"results"`
-	Subtitles   []SubDLSubtitle        `json:"subtitles"`
-	TotalPages  int                    `json:"totalPages"`
-	CurrentPage int                    `json:"currentPage"`
-}
-
-type SubDLSubtitleFeature struct {
+type SubtitleFeature struct {
 	Name         string  `json:"name"`
 	IMDBId       string  `json:"imdb_id"`
 	TMDBId       int     `json:"tmdb_id"`
@@ -39,7 +33,7 @@ type SubDLSubtitleFeature struct {
 	Year         int     `json:"year"`
 }
 
-type SubDLSubtitle struct {
+type Subtitle struct {
 	Name            string `json:"name"`
 	ID              int    `json:"-"` // not part of subdl api
 	ReleaseName     string `json:"release_name"`
@@ -54,4 +48,29 @@ type SubDLSubtitle struct {
 	EpisodeFrom     *int   `json:"episode_from"`
 	EpisodeEnd      *int   `json:"episode_end"`
 	FullSeason      bool   `json:"full_season"`
+}
+
+type DownloadOptions struct {
+	Subtitle   *Subtitle
+	OutPutFile string
+	OutPutDir  string
+}
+
+type SearchResults struct {
+	Status      bool              `json:"status"`
+	Results     []SubtitleFeature `json:"results"`
+	Subtitles   []Subtitle        `json:"subtitles"`
+	TotalPages  int               `json:"totalPages"`
+	CurrentPage int               `json:"currentPage"`
+}
+
+func (r *SearchResults) SubtitleByID(id string) (any, error) {
+	for _, sub := range r.Subtitles {
+		idStr := fmt.Sprint(sub.ID)
+		if idStr == id {
+			return &sub, nil
+		}
+	}
+
+	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
 }

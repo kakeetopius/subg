@@ -17,21 +17,31 @@ import (
 // Client manages making HTTP requests to the API.
 type Client struct {
 	baseURL    string
-	apiKey     string
-	userAgent  string
+	apiKey     *string
+	userAgent  *string
 	httpClient *http.Client
 	mu         sync.RWMutex // Protects token
 	authToken  *string
 }
 
 // New creates a new internal HTTP client.
-func New(baseURL, apiKey, userAgent string) *Client {
+func New(baseURL string) *Client {
 	return &Client{
 		baseURL:    baseURL,
-		apiKey:     apiKey,
-		userAgent:  userAgent,
-		httpClient: &http.Client{}, // Use default client, customize if needed (timeout, transport)
+		httpClient: &http.Client{},
 	}
+}
+
+func (c *Client) SetAPIKey(key *string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.apiKey = key
+}
+
+func (c *Client) SetUserAgent(userAgent *string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.userAgent = userAgent
 }
 
 // SetBaseURL updates the base URL used for requests.
@@ -63,11 +73,13 @@ func (c *Client) Delete(ctx context.Context, path string, target any) error {
 	return c.doRequest(ctx, http.MethodDelete, path, nil, nil, target)
 }
 
-// doRequest performs the actual HTTP request.
+// doRequest performs the actual HTTP request. If target is not nil, it assumes a response that is json is returned.
 func (c *Client) doRequest(ctx context.Context, method, path string, params any, body any, target any) error {
 	c.mu.RLock()
 	currentBaseURL := c.baseURL
 	currentToken := c.authToken
+	userAgent := c.userAgent
+	apiKey := c.apiKey
 	c.mu.RUnlock()
 
 	fullURL, err := url.Parse(currentBaseURL)
@@ -105,19 +117,23 @@ func (c *Client) doRequest(ctx context.Context, method, path string, params any,
 	}
 
 	// Set headers
-	if c.userAgent != "" {
-		req.Header.Set("User-Agent", c.userAgent)
+	if userAgent != nil && *userAgent != "" {
+		req.Header.Set("User-Agent", *c.userAgent)
 	}
-	req.Header.Set("Accept", "application/json")
+
+	if apiKey != nil && *apiKey != "" {
+		req.Header.Set("Api-Key", *c.apiKey)
+	}
+
+	if currentToken != nil && *currentToken != "" {
+		req.Header.Set("Authorization", "Bearer "+*currentToken)
+	}
 
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
 
-	// Add Authorization header if token exists
-	if currentToken != nil && *currentToken != "" {
-		req.Header.Set("Authorization", "Bearer "+*currentToken)
-	}
+	req.Header.Set("Accept", "application/json")
 
 	// Make the request
 	resp, err := c.httpClient.Do(req)

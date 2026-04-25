@@ -24,12 +24,15 @@ func LoginCmd() *cobra.Command {
 			}
 			switch providerToUse {
 			case "os":
-				return opensubtitles.Login(opensubtitles.OpenSubLoginOptions{
+				return opensubtitles.Login(opensubtitles.LoginOptions{
 					UserName: viperConfig.GetString("opensubtitles.username"),
 					Password: viperConfig.GetString("opensubtitles.password"),
 					APIKey:   viperConfig.GetString("opensubtitles.api_key"),
 					CacheDir: viperConfig.GetString("cache_dir"),
 				})
+			case "sd":
+				fmt.Println("Provider subdl.com doesn't need any authentication. The provider only requires an api key that can be passed via the --api-key flag or via the SUBDL_API_KEY or in the configuration file.")
+				return nil
 			case "a7":
 				fmt.Println("Provider: addic7ed.com doesn't need any authentication.")
 				return nil

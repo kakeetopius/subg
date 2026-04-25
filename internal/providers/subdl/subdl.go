@@ -14,13 +14,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-type SubDLDownloadOptions struct {
-	Subtitle   *SubDLSubtitle
-	OutPutFile string
-	OutPutDir  string
-}
-
-func SearchSubtitles(opts SubDLSearchParams) (*SubDLSearchResults, error) {
+func SearchSubtitles(opts SearchParams) (*SearchResults, error) {
 	c, err := NewClient(Config{
 		APIKey: opts.APIKey,
 	})
@@ -47,7 +41,7 @@ func SearchSubtitles(opts SubDLSearchParams) (*SubDLSearchResults, error) {
 	return results, nil
 }
 
-func DownloadSubtitle(opts SubDLDownloadOptions) (err error) {
+func DownloadSubtitle(opts DownloadOptions) (err error) {
 	if opts.Subtitle == nil {
 		return fmt.Errorf("no subtitle provided for download")
 	}
@@ -97,7 +91,7 @@ func DownloadSubtitle(opts SubDLDownloadOptions) (err error) {
 	}
 
 	pterm.Info.Printf("Zip file downloaded successfully to: %v \n", zipOutfile)
-	pterm.Info.Printf("Extracting zip file...\n")
+	pterm.Info.Printf("Extracting zip file...............\n")
 	return extractSubtitlesFromZip(zipBytesReader, opts.OutPutDir)
 }
 
@@ -130,20 +124,26 @@ func extractSubtitlesFromZip(zipBytes *bytes.Reader, outDir string) error {
 	}
 
 	for _, f := range srtFiles {
-		subtitleFile, err := f.Open()
-		if err != nil {
-			return err
-		}
-		defer subtitleFile.Close()
+		err := func() error {
+			subtitleFile, err := f.Open()
+			if err != nil {
+				return err
+			}
+			defer subtitleFile.Close()
 
-		outFileName := path.Join(outDir, f.Name)
-		outFile, err := os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE, 0o644)
-		if err != nil {
-			return err
-		}
-		defer outFile.Close()
+			outFileName := path.Join(outDir, f.Name)
+			outFile, err := os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE, 0o644)
+			if err != nil {
+				return err
+			}
+			defer outFile.Close()
 
-		_, err = io.Copy(outFile, subtitleFile)
+			_, err = io.Copy(outFile, subtitleFile)
+			if err != nil {
+				return err
+			}
+			return nil
+		}()
 		if err != nil {
 			return err
 		}

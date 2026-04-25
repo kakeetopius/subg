@@ -65,8 +65,9 @@ func init() {
 	rootCmd.PersistentFlags().MarkHidden("api-key")
 	apiKeyPflag := rootCmd.PersistentFlags().Lookup("api-key")
 	viperConfig.BindPFlag("opensubtitles.api_key", apiKeyPflag)
-	viperConfig.BindPFlag("subdl.api_key", apiKeyPflag)
 	viperConfig.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
+	viperConfig.BindPFlag("subdl.api_key", apiKeyPflag)
+	viperConfig.BindEnv("subdl.api_key", "SUBDL_API_KEY")
 
 	rootCmd.PersistentFlags().StringVar(&provider, "provider", "", "The provider to use.")
 	viperConfig.BindPFlag("provider", rootCmd.PersistentFlags().Lookup("provider"))

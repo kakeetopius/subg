@@ -55,10 +55,10 @@ func SearchCmd() *cobra.Command {
 			switch providerToUse {
 			case "os":
 				return searchAndDownloadWithOpenSubtitles(query)
-			case "a7":
-				return searchAndDownloadWithAddic7ed(query)
 			case "sd":
 				return searchAndDownloadWithSubdl(query)
+			case "a7":
+				return searchAndDownloadWithAddic7ed(query)
 			default:
 				if providerToUse != "" {
 					return fmt.Errorf("unknown subtitle provider: %v", providerToUse)
@@ -67,7 +67,7 @@ func SearchCmd() *cobra.Command {
 
 			// If no provider was given try downloading from open subtitles first
 			err = searchAndDownloadWithOpenSubtitles(query)
-			if err == nil {
+			if err == nil || errors.Is(err, ui.ErrUserQuit) {
 				return
 			}
 
@@ -76,7 +76,7 @@ func SearchCmd() *cobra.Command {
 
 			// Try subdl next
 			err = searchAndDownloadWithSubdl(query)
-			if err == nil {
+			if err == nil || errors.Is(err, ui.ErrUserQuit) {
 				return
 			}
 
@@ -114,7 +114,7 @@ func searchAndDownloadWithOpenSubtitles(query string) error {
 	if api == "" {
 		return fmt.Errorf("open subtitle API Key not given. You can provide it with the --api-key flag or in the configuration file or via the environment variable OPENSUBTITLES_API_KEY ")
 	}
-	searchOptions := opensubtitles.OpenSubSearchOptions{
+	searchOptions := opensubtitles.SearchOptions{
 		Query:         query,
 		IMDBId:        imdbID,
 		SeasonNumber:  season,
@@ -155,7 +155,7 @@ func searchAndDownloadWithOpenSubtitles(query string) error {
 		}
 		return err
 	}
-	err = opensubtitles.DownloadSubtitle(opensubtitles.OpenSubDownloadOptions{
+	err = opensubtitles.DownloadSubtitle(opensubtitles.DownloadOptions{
 		Subtitle:   selectedSubtitle,
 		Format:     subtitleFormat,
 		OutPutFile: outputFile,
@@ -172,7 +172,7 @@ func searchAndDownloadWithOpenSubtitles(query string) error {
 }
 
 func searchAndDownloadWithAddic7ed(query string) error {
-	searchOptions := addic7ed.Addic7edSearchOptions{
+	searchOptions := addic7ed.SearchOptions{
 		Query:    query,
 		Language: subtitleLang,
 		Season:   season,
@@ -187,7 +187,7 @@ func searchAndDownloadWithAddic7ed(query string) error {
 		return err
 	}
 
-	err = addic7ed.DownloadSubtitle(addic7ed.Addic7edDownloadOptions{
+	err = addic7ed.DownloadSubtitle(addic7ed.DownloadOptions{
 		Subtitle:   *selected,
 		OutPutFile: subs.Name,
 		OutPutDir:  outputDir,
@@ -200,11 +200,12 @@ func searchAndDownloadWithAddic7ed(query string) error {
 }
 
 func searchAndDownloadWithSubdl(query string) error {
-	searchOptions := subdl.SubDLSearchParams{
+	searchOptions := subdl.SearchParams{
 		APIKey: viperConfig.GetString("subdl.api_key"),
 		Query:  &query,
 	}
 
+	// keyword "movie" or "tv" is what is required by the subdl API.
 	featureType := "movie"
 	if isSerie || season != 0 || episode != 0 {
 		// if a season or episode is given we assume it is a serie
@@ -239,11 +240,11 @@ func searchAndDownloadWithSubdl(query string) error {
 		return fmt.Errorf("no Results returned for %v", query)
 	}
 
-	sub, err := ui.DisplaySubDLTable(results.Subtitles)
+	sub, err := ui.DisplaySubDLTable(results)
 	if err != nil {
 		return err
 	}
-	err = subdl.DownloadSubtitle(subdl.SubDLDownloadOptions{
+	err = subdl.DownloadSubtitle(subdl.DownloadOptions{
 		Subtitle:   sub,
 		OutPutDir:  outputDir,
 		OutPutFile: outputFile,

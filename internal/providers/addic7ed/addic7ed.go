@@ -9,19 +9,14 @@ import (
 	"github.com/pterm/pterm"
 )
 
-type Addic7edSearchOptions struct {
+type SearchOptions struct {
 	Query    string
 	Episode  int
 	Season   int
 	Language string
 }
 
-type Addic7edSubtitle struct {
-	Name         string
-	SubtitleOpts []SubtitleOption
-}
-
-type Addic7edDownloadOptions struct {
+type DownloadOptions struct {
 	Subtitle SubtitleOption
 
 	OutPutFile string
@@ -35,7 +30,25 @@ type SubtitleOption struct {
 	Link     string
 }
 
-func SearchSubtitle(opts Addic7edSearchOptions) (Addic7edSubtitle, error) {
+type Subtitle struct {
+	Name         string
+	SubtitleOpts []SubtitleOption
+}
+
+type SearchResult Subtitle
+
+func (r SearchResult) SubtitleByID(id string) (any, error) {
+	for _, sub := range r.SubtitleOpts {
+		idStr := fmt.Sprint(sub.ID)
+		if idStr == id {
+			return &sub, nil
+		}
+	}
+
+	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
+}
+
+func SearchSubtitle(opts SearchOptions) (SearchResult, error) {
 	client := addic7ed.New()
 
 	showName := opts.Query
@@ -47,19 +60,19 @@ func SearchSubtitle(opts Addic7edSearchOptions) (Addic7edSubtitle, error) {
 	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on addic7ed.com..........")
 	if err != nil {
 		spinner.Fail()
-		return Addic7edSubtitle{}, err
+		return SearchResult{}, err
 	}
 
 	show, err := client.SearchAll(showName)
 	if err != nil {
 		spinner.Fail()
-		return Addic7edSubtitle{}, err
+		return SearchResult{}, err
 	}
 	if opts.Language != "" {
 		show.Subtitles = show.Subtitles.Filter(addic7ed.WithLanguage(LanguageFullForm(opts.Language)))
 	}
 
-	subtitle := Addic7edSubtitle{
+	subtitle := SearchResult{
 		Name:         show.Name,
 		SubtitleOpts: make([]SubtitleOption, 0, len(show.Subtitles)),
 	}
@@ -79,7 +92,7 @@ func SearchSubtitle(opts Addic7edSearchOptions) (Addic7edSubtitle, error) {
 	return subtitle, nil
 }
 
-func DownloadSubtitle(opts Addic7edDownloadOptions) error {
+func DownloadSubtitle(opts DownloadOptions) error {
 	subtitle := addic7ed.Subtitle{
 		Language: opts.Subtitle.Language,
 		Version:  opts.Subtitle.Version,

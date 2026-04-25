@@ -3,7 +3,6 @@ package subdl
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/kakeetopius/subg/internal/httpclient"
 )
@@ -19,9 +18,7 @@ type Config struct {
 
 type Client struct {
 	config     Config
-	httpClient *httpclient.Client // Internal HTTP client
-	mu         sync.RWMutex       // Protects access to token and currentBaseUrl
-	authToken  *string
+	httpClient *httpclient.Client
 	baseURL    string
 }
 
@@ -31,16 +28,19 @@ func NewClient(c Config) (*Client, error) {
 	}
 
 	client := Client{
-		config:     c,
-		httpClient: httpclient.New(SUBDLAPIURL, c.APIKey, "subg v1"),
-		baseURL:    SUBDLAPIURL,
+		config:  c,
+		baseURL: SUBDLAPIURL,
 	}
 
+	httpClient := httpclient.New(SUBDLAPIURL)
+	httpClient.SetAPIKey(&c.APIKey)
+
+	client.httpClient = httpClient
 	return &client, nil
 }
 
-func (c *Client) SearchSubtitles(ctx context.Context, params SubDLSearchParams) (*SubDLSearchResults, error) {
-	var response SubDLSearchResults
+func (c *Client) SearchSubtitles(ctx context.Context, params SearchParams) (*SearchResults, error) {
+	var response SearchResults
 
 	err := c.httpClient.Get(ctx, "/subtitles", params, &response)
 	if err != nil {

@@ -8,9 +8,6 @@ import (
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
-	"github.com/kakeetopius/subg/internal/providers/addic7ed"
-	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
-	"github.com/kakeetopius/subg/internal/providers/subdl"
 )
 
 var ErrUserQuit = errors.New("user quit")
@@ -54,133 +51,6 @@ func (m model) View() tea.View {
 	return tea.NewView(baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n")
 }
 
-func DisplayOpenSubTable(subtitles []opensubtitles.OpenSubSubtitle) (*opensubtitles.OpenSubSubtitle, error) {
-	if len(subtitles) < 1 {
-		return nil, fmt.Errorf("subtitle results empty")
-	}
-	columns := []table.Column{
-		{Title: "ID", Width: 8},
-		{Title: "Name", Width: 72},
-		{Title: "Lang", Width: 10},
-		{Title: "Rating", Width: 10},
-		{Title: "Votes", Width: 10},
-	}
-
-	rows := []table.Row{}
-	for _, subtitle := range subtitles {
-		rows = append(rows, []string{
-			subtitle.SubtitleID,
-			subtitle.Release,
-			subtitle.Language,
-			fmt.Sprintf("%v", subtitle.Ratings),
-			fmt.Sprintf("%v", subtitle.Votes),
-		})
-	}
-
-	m, err := setUpTable(columns, rows, 0, 110)
-	if err != nil {
-		return nil, err
-	}
-	returnedModel, err := tea.NewProgram(m).Run()
-	if err != nil {
-		return nil, err
-	}
-
-	finalModel, ok := returnedModel.(model)
-	if !ok {
-		return nil, fmt.Errorf("could not get selected subtitle")
-	}
-	if finalModel.userQuit {
-		return nil, ErrUserQuit
-	}
-
-	return openSubtitleObjByID(finalModel.selectedRowID, subtitles)
-}
-
-func DisplayAddic7edTable(subs *addic7ed.Addic7edSubtitle) (*addic7ed.SubtitleOption, error) {
-	if len(subs.SubtitleOpts) == 0 {
-		return nil, fmt.Errorf("no subtitles returned by addic7ed")
-	}
-
-	columns := []table.Column{
-		{Title: "ID", Width: 5},
-		{Title: "Name", Width: 70},
-		{Title: "Lang", Width: 10},
-		{Title: "Version", Width: 10},
-	}
-
-	rows := []table.Row{}
-	for _, sub := range subs.SubtitleOpts {
-		rows = append(rows, []string{
-			fmt.Sprint(sub.ID),
-			subs.Name,
-			sub.Language,
-			sub.Version,
-		})
-	}
-
-	m, err := setUpTable(columns, rows, 0, 95)
-	if err != nil {
-		return nil, err
-	}
-	returnedModel, err := tea.NewProgram(m).Run()
-	if err != nil {
-		return nil, err
-	}
-
-	finalModel, ok := returnedModel.(model)
-	if !ok {
-		return nil, fmt.Errorf("could not get selected subtitle")
-	}
-	if finalModel.userQuit {
-		return nil, ErrUserQuit
-	}
-
-	return addic7edSubtitleOptByID(finalModel.selectedRowID, subs)
-}
-
-func DisplaySubDLTable(subs []subdl.SubDLSubtitle) (*subdl.SubDLSubtitle, error) {
-	if len(subs) == 0 {
-		return nil, fmt.Errorf("no subtitles returned by subdl")
-	}
-
-	columns := []table.Column{
-		{Title: "ID", Width: 5},
-		{Title: "Name", Width: 70},
-		{Title: "Lang", Width: 10},
-		{Title: "Author", Width: 15},
-	}
-
-	rows := []table.Row{}
-	for _, sub := range subs {
-		rows = append(rows, []string{
-			fmt.Sprint(sub.ID),
-			sub.ReleaseName,
-			sub.Lang,
-			sub.Author,
-		})
-	}
-
-	m, err := setUpTable(columns, rows, 0, 100)
-	if err != nil {
-		return nil, err
-	}
-	returnedModel, err := tea.NewProgram(m).Run()
-	if err != nil {
-		return nil, err
-	}
-
-	finalModel, ok := returnedModel.(model)
-	if !ok {
-		return nil, fmt.Errorf("could not get selected subtitle")
-	}
-	if finalModel.userQuit {
-		return nil, ErrUserQuit
-	}
-
-	return subdlSubByID(finalModel.selectedRowID, subs)
-}
-
 func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, tableWidth int) (tea.Model, error) {
 	if len(columns) == 0 {
 		return nil, fmt.Errorf("table columns empty")
@@ -216,36 +86,4 @@ func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int, ta
 	}
 
 	return m, nil
-}
-
-func openSubtitleObjByID(id string, subtitles []opensubtitles.OpenSubSubtitle) (*opensubtitles.OpenSubSubtitle, error) {
-	for _, sub := range subtitles {
-		if sub.SubtitleID == id {
-			return &sub, nil
-		}
-	}
-
-	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
-}
-
-func addic7edSubtitleOptByID(id string, subtitle *addic7ed.Addic7edSubtitle) (*addic7ed.SubtitleOption, error) {
-	for _, sub := range subtitle.SubtitleOpts {
-		idStr := fmt.Sprint(sub.ID)
-		if idStr == id {
-			return &sub, nil
-		}
-	}
-
-	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
-}
-
-func subdlSubByID(id string, subtitles []subdl.SubDLSubtitle) (*subdl.SubDLSubtitle, error) {
-	for _, sub := range subtitles {
-		idStr := fmt.Sprint(sub.ID)
-		if idStr == id {
-			return &sub, nil
-		}
-	}
-
-	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
 }
