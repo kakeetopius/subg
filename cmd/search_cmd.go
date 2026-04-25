@@ -30,7 +30,7 @@ var (
 
 func SearchCmd() *cobra.Command {
 	searchCmd := cobra.Command{
-		Use:     "search",
+		Use:     "search query",
 		Short:   "Search and download subtitles for a movie or show.",
 		Aliases: []string{"s"},
 		Args:    cobra.ExactArgs(1),

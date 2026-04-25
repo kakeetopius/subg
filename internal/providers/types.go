@@ -3,6 +3,8 @@ package providers
 
 type SubtitleSearchResult interface {
 	SubtitleByID(id string) (Subtitle, error)
+
+	// BestSubtitle() -> Get best subtitle from result Set
 }
 
 type Subtitle interface {
