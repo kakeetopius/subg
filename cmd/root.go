@@ -11,7 +11,9 @@ import (
 )
 
 var (
+	debug       bool
 	cfgFile     string
+	subgVersion = "subg v.0.1.3"
 	viperConfig *viper.Viper
 )
 
@@ -72,9 +74,11 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&provider, "provider", "", "The provider to use.")
 	viperConfig.BindPFlag("provider", rootCmd.PersistentFlags().Lookup("provider"))
 
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Run in debug mode.")
 	rootCmd.AddCommand(
 		SearchCmd(),
 		LoginCmd(),
+		versionCmd(),
 	)
 }
 
@@ -110,9 +114,22 @@ func initConfig() error {
 			// if file not found no need to error.
 			return nil
 		}
-		return err
+		return fmt.Errorf("error reading config file %v: %w", viper.ConfigFileUsed(), err)
 	}
 
-	fmt.Fprintln(os.Stderr, "Using config file:", viperConfig.ConfigFileUsed())
+	if debug {
+		fmt.Fprintln(os.Stderr, "Using config file:", viperConfig.ConfigFileUsed())
+	}
+
 	return nil
+}
+
+func versionCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "version",
+		Short: "Get the version",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(subgVersion)
+		},
+	}
 }
