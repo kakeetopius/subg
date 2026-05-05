@@ -75,6 +75,7 @@ func init() {
 	viperConfig.BindPFlag("provider", rootCmd.PersistentFlags().Lookup("provider"))
 
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Run in debug mode.")
+
 	rootCmd.AddCommand(
 		SearchCmd(),
 		LoginCmd(),

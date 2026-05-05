@@ -150,7 +150,7 @@ func (c *Client) doRequest(ctx context.Context, method, path string, params any,
 
 	// Check status code
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("api request failed: status %d, body: %s", resp.StatusCode, string(respBodyBytes))
+		return fmt.Errorf("api request failed: status %s, body: %s", resp.Status, string(respBodyBytes))
 	}
 
 	// Decode successful response if target is provided
