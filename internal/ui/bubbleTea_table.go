@@ -5,12 +5,15 @@ import (
 	"errors"
 	"fmt"
 
+	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/table"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 )
 
 var ErrUserQuit = errors.New("user quit")
+
+var ErrNextProvider = errors.New("user requested next provider")
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
@@ -24,6 +27,8 @@ type model struct {
 	identifierColumn int
 	// userQuit is to signal that the user did not select any row but just quit!
 	userQuit bool
+	// nextProvider indicates that user wants to try the next subtitle provider
+	nextProvider bool
 }
 
 func (m model) Init() tea.Cmd { return nil }
@@ -42,6 +47,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "q", "ctrl+c":
 			m.userQuit = true
 			return m, tea.Quit
+		case "n":
+			m.nextProvider = true
+			return m, tea.Quit
 		case "enter":
 			m.selectedRowID = m.table.SelectedRow()[m.identifierColumn]
 			return m, tea.Quit
@@ -52,7 +60,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() tea.View {
-	return tea.NewView(baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + "\n")
+	return tea.NewView(baseStyle.Render(m.table.View()) + "\n  " + m.table.HelpView() + keyMapHelp("n", "next provider") + keyMapHelp("q", "quit") + "\n")
+}
+
+func keyMapHelp(key, desc string) string {
+	helpStyle := help.DefaultDarkStyles()
+	return helpStyle.ShortKey.Inline(true).Render(" • ", key) + " " + helpStyle.ShortDesc.Inline(true).Render(desc)
 }
 
 func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int) (tea.Model, error) {

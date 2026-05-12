@@ -37,8 +37,10 @@ func SearchCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			defer func() {
 				// if error is ui.ErrUserQuit no need to return it
-				if err != nil && errors.Is(err, ui.ErrUserQuit) {
-					err = nil
+				if err != nil {
+					if errors.Is(err, ui.ErrNextProvider) || errors.Is(err, ui.ErrUserQuit) {
+						err = nil
+					}
 				}
 			}()
 
@@ -71,25 +73,30 @@ func SearchCmd() *cobra.Command {
 				return
 			}
 
-			pterm.Error.Printf("Opensubtitles returned error: %v\n", err)
-			pterm.Info.Println("Trying subdl.com")
+			if !errors.Is(err, ui.ErrNextProvider) {
+				pterm.Error.Printf("Opensubtitles returned error: %v\n", err)
+			}
 
+			pterm.Info.Println("Trying subdl.com")
 			// Try subdl next
 			err = searchAndDownloadWithSubdl(query)
 			if err == nil || errors.Is(err, ui.ErrUserQuit) {
 				return
 			}
 
-			pterm.Error.Printf("subdl.com returned error: %v\n", err)
-			pterm.Info.Println("Trying addic7ed.com")
+			if !errors.Is(err, ui.ErrNextProvider) {
+				pterm.Error.Printf("subdl.com returned error: %v\n", err)
+			}
 
+			pterm.Info.Println("Trying addic7ed.com")
 			// Try addic7ed next
 			err = searchAndDownloadWithAddic7ed(query)
-			if err != nil {
-				pterm.Error.Println(err)
-				// We dont return the error because it is already printed
+
+			if err != nil && errors.Is(err, ui.ErrNextProvider) {
+				pterm.Info.Println("No more providers to try")
 			}
-			return nil
+
+			return err
 		},
 	}
 

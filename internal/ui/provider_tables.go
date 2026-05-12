@@ -104,6 +104,9 @@ func displayTableAndGetSubtitle(results providers.SubtitleSearchResult, rows []t
 	if finalModel.userQuit {
 		return nil, ErrUserQuit
 	}
+	if finalModel.nextProvider {
+		return nil, ErrNextProvider
+	}
 
 	return results.SubtitleByID(finalModel.selectedRowID)
 }
