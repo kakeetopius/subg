@@ -53,7 +53,7 @@ func (p *OpenSubtitles) SearchSubtitle() error {
 	if err != nil {
 		return err
 	}
-	if len(p.subtitles) < 1 {
+	if len(subs) == 0 {
 		if p.opts.IsSerie {
 			return fmt.Errorf("no results returned for %v Season %v Episode %v", p.opts.Query, p.opts.Season, p.opts.Episode)
 		}
@@ -116,7 +116,7 @@ func (p *OpenSubtitles) DisplaySelections() ([]providers.Subtitle, error) {
 func (p *OpenSubtitles) subtitleByID(id string) (providers.Subtitle, error) {
 	for _, sub := range p.subtitles {
 		if sub.SubtitleID == id {
-			return &sub, nil
+			return sub, nil
 		}
 	}
 

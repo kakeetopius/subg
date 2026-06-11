@@ -3,6 +3,7 @@ package providers
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/kakeetopius/subg/internal/ui"
 	"github.com/pterm/pterm"
@@ -81,7 +82,9 @@ func (set *ProviderSet) WithProvider(provider Provider, providerSpecificOpts ...
 }
 
 func (set *ProviderSet) StartSearchAndDownload() error {
+outer:
 	for _, query := range set.subtitleQueries {
+		fmt.Println()
 		pterm.Info.Printf("Searching Subtitles for: %s\n", query)
 		for _, provider := range set.providers {
 			pterm.Info.Printf("Trying provider: %s\n", provider.Name())
@@ -98,7 +101,7 @@ func (set *ProviderSet) StartSearchAndDownload() error {
 				}
 				continue
 			}
-			return nil
+			continue outer
 		}
 	}
 

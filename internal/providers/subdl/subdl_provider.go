@@ -51,7 +51,7 @@ func (p *SubDL) SearchSubtitle() error {
 		return err
 	}
 
-	if len(p.subtitles) < 1 {
+	if len(subs) == 0 {
 		if p.opts.IsSerie {
 			return fmt.Errorf("no results returned for %v Season %v Episode %v", p.opts.Query, p.opts.Season, p.opts.Episode)
 		}
@@ -114,7 +114,7 @@ func (p *SubDL) subtitleByID(id string) (providers.Subtitle, error) {
 	for _, sub := range p.subtitles {
 		idStr := fmt.Sprint(sub.ID)
 		if idStr == id {
-			return &sub, nil
+			return sub, nil
 		}
 	}
 

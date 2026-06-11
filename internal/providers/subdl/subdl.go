@@ -27,6 +27,7 @@ func searchSubtitles(opts options) ([]SDSubtitle, error) {
 
 	searchParams := SearchParams{}
 	searchParams.Query = &opts.Query
+	searchParams.APIKey = opts.APIKey
 
 	if opts.Season != 0 {
 		searchParams.SeasonNumber = &opts.Season
@@ -54,10 +55,6 @@ func searchSubtitles(opts options) ([]SDSubtitle, error) {
 		return nil, err
 	}
 
-	if !results.Status {
-		return nil, fmt.Errorf("could not get subtitles from subdl")
-	}
-
 	id := 1000
 	for i := range results.Subtitles {
 		results.Subtitles[i].ID = id
@@ -74,12 +71,13 @@ func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
 	}
 	url := SUBDLDOWNLOADURL + subtitle.URL
 
+	tmpDir := os.TempDir()
 	zipOutfile := opts.OutPutFile
 	if zipOutfile == "" {
 		zipOutfile = fmt.Sprintf("%v.%v", subtitle.ReleaseName, "zip")
 	}
 
-	zipOutfile = path.Join(opts.OutPutDir, zipOutfile)
+	zipOutfile = path.Join(tmpDir, zipOutfile)
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
 	if err != nil {
 		return err
