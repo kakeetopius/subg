@@ -11,22 +11,23 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	subtitleLang   string
-	season         int
-	episode        int
-	subtitleFormat string
-	releaseYear    int
-	outputFile     string
-	outputDir      string
-	imdbID         int
-
-	isMovie    bool
-	isSerie    bool
-	autoSelect bool
-)
-
 func DownloadCmd() *cobra.Command {
+	var (
+		subtitleLang   string
+		season         int
+		episode        int
+		subtitleFormat string
+		releaseYear    int
+		outputFile     string
+		outputDir      string
+		imdbID         int
+
+		isMovie        bool
+		isSerie        bool
+		autoSelect     bool
+		providersGiven []string
+	)
+
 	dlCmd := cobra.Command{
 		Use:     "download query",
 		Short:   "Search and download subtitles for a movie or tv show.",
@@ -96,6 +97,9 @@ func DownloadCmd() *cobra.Command {
 	dlCmd.Flags().BoolVar(&autoSelect, "auto", false, "Automatically select one subtitle to download without asking user.")
 	dlCmd.Flags().BoolVar(&isMovie, "movie", false, "Specifies that the query is for a movie to reduce ambiguity")
 	dlCmd.Flags().BoolVar(&isSerie, "serie", false, "Specifies that the query is for a serie to reduce ambiguity")
+
+	dlCmd.Flags().StringSliceVarP(&providersGiven, "providers", "p", nil, "The provider(s) to use.")
+	appConfig.BindPFlag("providers", dlCmd.Flags().Lookup("providers"))
 	return &dlCmd
 }
 

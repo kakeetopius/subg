@@ -9,8 +9,9 @@ import (
 
 func LoginCmd() *cobra.Command {
 	var (
-		userName string
-		password string
+		userName       string
+		password       string
+		providersGiven []string
 	)
 
 	loginCmd := cobra.Command{
@@ -57,5 +58,7 @@ func LoginCmd() *cobra.Command {
 	appConfig.BindPFlag("opensubtitles.username", userNamePflag)
 	appConfig.BindPFlag("opensubtitles.password", passwordPflag)
 
+	loginCmd.Flags().StringSliceVarP(&providersGiven, "providers", "p", nil, "The provider(s) to use.")
+	appConfig.BindPFlag("providers", loginCmd.Flags().Lookup("providers"))
 	return &loginCmd
 }

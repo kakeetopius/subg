@@ -47,9 +47,8 @@ func Execute() {
 
 func init() {
 	var (
-		apiKey    string
-		cacheDir  string
-		providers []string
+		apiKey   string
+		cacheDir string
 	)
 
 	appConfig = viper.New()
@@ -70,9 +69,6 @@ func init() {
 	appConfig.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
 	appConfig.BindPFlag("subdl.api_key", apiKeyPflag)
 	appConfig.BindEnv("subdl.api_key", "SUBDL_API_KEY")
-
-	rootCmd.PersistentFlags().StringSliceVarP(&providers, "providers", "p", nil, "The provider(s) to use.")
-	appConfig.BindPFlag("providers", rootCmd.PersistentFlags().Lookup("providers"))
 
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Run in debug mode.")
 
