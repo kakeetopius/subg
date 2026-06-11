@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/kakeetopius/subg/internal/providers/addic7ed"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
 	"github.com/kakeetopius/subg/internal/providers/subdl"
-	"github.com/kakeetopius/subg/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -31,21 +29,12 @@ var (
 func SearchCmd() *cobra.Command {
 	searchCmd := cobra.Command{
 		Use:     "search query",
-		Short:   "Search and download subtitles for a movie or show.",
+		Short:   "Search and download subtitles for a movie or tv show.",
 		Aliases: []string{"s"},
-		Args:    cobra.ExactArgs(1),
+		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			defer func() {
-				// if error is ui.ErrUserQuit no need to return it
-				if err != nil {
-					if errors.Is(err, ui.ErrNextProvider) || errors.Is(err, ui.ErrUserQuit) {
-						err = nil
-					}
-				}
-			}()
-
 			providersToUse := appConfig.GetStringSlice("providers")
-			query := args[0]
+
 			// Set the outputDir to current working directory if not given
 			if outputDir == "" {
 				outputDir, err = os.Getwd()
@@ -54,9 +43,8 @@ func SearchCmd() *cobra.Command {
 				}
 			}
 
-			providerSet := providers.NewProviderSet()
+			providerSet := providers.NewProviderSet(args)
 			providerSet.WithOptions(providers.Options{
-				Query:          query,
 				IMDBId:         imdbID,
 				Season:         season,
 				Episode:        episode,
@@ -92,7 +80,7 @@ func SearchCmd() *cobra.Command {
 				addAllProvidersToSet(&providerSet)
 			}
 
-			return providerSet.Start()
+			return providerSet.StartSearchAndDownload()
 		},
 	}
 

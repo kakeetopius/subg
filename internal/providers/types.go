@@ -4,6 +4,7 @@ package providers
 import (
 	"errors"
 
+	"github.com/kakeetopius/subg/internal/ui"
 	"github.com/pterm/pterm"
 )
 
@@ -28,9 +29,9 @@ type Provider interface {
 type Subtitle any
 
 type ProviderSet struct {
-	providers []subtitleProvider
-
-	options Options
+	providers       []subtitleProvider
+	options         Options
+	subtitleQueries []string
 }
 
 type subtitleProvider struct {
@@ -58,8 +59,8 @@ type Options struct {
 	AutoSelect     bool
 }
 
-func NewProviderSet() ProviderSet {
-	return ProviderSet{}
+func NewProviderSet(subtitleQueries []string) ProviderSet {
+	return ProviderSet{subtitleQueries: subtitleQueries}
 }
 
 func (set *ProviderSet) WithOptions(options Options) *ProviderSet {
@@ -79,44 +80,55 @@ func (set *ProviderSet) WithProvider(provider Provider, providerSpecificOpts ...
 	return set
 }
 
-func (set *ProviderSet) Start() error {
-	for _, provider := range set.providers {
-		provider.WithOptions(set.options)
+func (set *ProviderSet) StartSearchAndDownload() error {
+	for _, query := range set.subtitleQueries {
+		pterm.Info.Printf("Searching Subtitles for: %s\n", query)
+		for _, provider := range set.providers {
+			pterm.Info.Printf("Trying provider: %s\n", provider.Name())
+			opts := set.options
 
-		if provider.providerSpecificOpts != nil {
-			provider.WithSpecificOptions(provider.providerSpecificOpts)
-		}
-
-		err := provider.SearchSubtitle()
-		if err != nil {
-			pterm.Error.Printf("Provider %s returned error: %s\n", provider.Name(), err)
-			continue
-		}
-
-		if set.options.AutoSelect {
-			err = provider.DownloadBest()
+			opts.Query = query
+			err := searchAndDownloadWithProvider(provider, opts)
 			if err != nil {
-				pterm.Error.Printf("Provider %s returned error: %s\n", provider.Name(), err)
+				if errors.Is(err, ui.ErrUserQuit) {
+					return nil
+				}
+				if !errors.Is(err, ui.ErrNextProvider) {
+					pterm.Error.Printf("Provider %s returned error: %s\n", provider.Name(), err)
+				}
 				continue
 			}
 			return nil
 		}
+	}
 
-		selected, err := provider.DisplaySelections()
-		if err != nil {
-			if !errors.Is(err, ErrNextProvider) {
-				pterm.Error.Printf("Provider %s returned error: %s\n", provider.Name(), err)
-			}
-			continue
-		}
+	return nil
+}
 
-		err = provider.Download(selected)
+func searchAndDownloadWithProvider(provider subtitleProvider, opts Options) error {
+	provider.WithOptions(opts)
+
+	if provider.providerSpecificOpts != nil {
+		provider.WithSpecificOptions(provider.providerSpecificOpts)
+	}
+
+	err := provider.SearchSubtitle()
+	if err != nil {
+		return err
+	}
+
+	if opts.AutoSelect {
+		err = provider.DownloadBest()
 		if err != nil {
-			pterm.Error.Printf("Provider %s returned error: %s\n", provider.Name(), err)
-			continue
+			return err
 		}
 		return nil
 	}
 
-	return nil
+	selected, err := provider.DisplaySelections()
+	if err != nil {
+		return err
+	}
+
+	return provider.Download(selected)
 }
