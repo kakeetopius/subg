@@ -15,8 +15,10 @@ func LoginCmd() *cobra.Command {
 	)
 
 	loginCmd := cobra.Command{
-		Use:     "login",
-		Short:   "Authenticate to a subtitle provider",
+		Use:   "login",
+		Short: "Authenticate to a subtitle provider",
+		Long: `Authenticate to a subtitle provider.
+Note that only opensubtitles (code: os) requires authentication at the moment`,
 		Aliases: []string{"l"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			providersToUse := appConfig.GetStringSlice("providers")

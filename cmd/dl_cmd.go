@@ -29,8 +29,16 @@ func DownloadCmd() *cobra.Command {
 	)
 
 	dlCmd := cobra.Command{
-		Use:     "download query",
-		Short:   "Search and download subtitles for a movie or tv show.",
+		Use:   "download query",
+		Short: "Search and download subtitles for a movie or tv show.",
+		Long: `Search and download subtitles for a movie or tv show.
+
+subg is capable of downloading subtitles from various subtitle providers.
+The following is the list of supported providers so far in order of priority.
+  os:   opensubtitles.com
+  sd:	subdl.com
+  a7:   addic7ed.com
+`,
 		Aliases: []string{"dl", "d"},
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {

@@ -6,10 +6,10 @@ import (
 
 func ConvertCmd() *cobra.Command {
 	convertCmd := cobra.Command{
-		Use:     "download query",
-		Short:   "Search and download subtitles for a movie or tv show.",
-		Aliases: []string{"dl", "d"},
-		Args:    cobra.MinimumNArgs(1),
+		Use:     "convert",
+		Short:   "Convert subtitle from one format to another",
+		Aliases: []string{"c"},
+		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			return nil
 		},

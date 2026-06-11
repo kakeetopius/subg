@@ -20,17 +20,8 @@ var (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:          "subg",
-	Short:        "A tool for searching and downloading movie, series subtitles.",
+	Short:        "A tool for downloading, generating, and manipulating subtitles.",
 	SilenceUsage: true,
-	Long: `A tool for searching and downloading movie, series subtitles.
-
-subg is capable of downloading subtitles from various subtitle providers.
-
-The following is the list of supported providers so far in order of priority.
-  os:   opensubtitles.com
-  sd:	subdl.com
-  a7:   addic7ed.com
-`,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		return initConfig()
@@ -76,6 +67,8 @@ func init() {
 		DownloadCmd(),
 		LoginCmd(),
 		versionCmd(),
+		GenCmd(),
+		ConvertCmd(),
 	)
 }
 
