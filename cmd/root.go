@@ -71,13 +71,13 @@ func init() {
 	appConfig.BindPFlag("subdl.api_key", apiKeyPflag)
 	appConfig.BindEnv("subdl.api_key", "SUBDL_API_KEY")
 
-	rootCmd.PersistentFlags().StringSliceVarP(&providers, "providers", "p", nil, "The provider to use.")
+	rootCmd.PersistentFlags().StringSliceVarP(&providers, "providers", "p", nil, "The provider(s) to use.")
 	appConfig.BindPFlag("providers", rootCmd.PersistentFlags().Lookup("providers"))
 
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Run in debug mode.")
 
 	rootCmd.AddCommand(
-		SearchCmd(),
+		DownloadCmd(),
 		LoginCmd(),
 		versionCmd(),
 	)
@@ -104,7 +104,6 @@ func initConfig() error {
 		appConfig.AddConfigPath(configDir)
 		appConfig.AddConfigPath(path.Join(configDir, "subg"))
 		appConfig.SetConfigName("subg")
-		appConfig.SetConfigType("toml")
 	}
 
 	appConfig.AutomaticEnv() // read in environment variables that match

@@ -26,11 +26,11 @@ var (
 	autoSelect bool
 )
 
-func SearchCmd() *cobra.Command {
-	searchCmd := cobra.Command{
-		Use:     "search query",
+func DownloadCmd() *cobra.Command {
+	dlCmd := cobra.Command{
+		Use:     "download query",
 		Short:   "Search and download subtitles for a movie or tv show.",
-		Aliases: []string{"s"},
+		Aliases: []string{"dl", "d"},
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			providersToUse := appConfig.GetStringSlice("providers")
@@ -84,19 +84,19 @@ func SearchCmd() *cobra.Command {
 		},
 	}
 
-	searchCmd.Flags().SortFlags = false
-	searchCmd.Flags().StringVarP(&subtitleLang, "lang", "l", "en", "The Language for the subtitle to get.")
-	searchCmd.Flags().IntVarP(&season, "season", "s", 0, "The serie's season if getting subtitles for a serie.")
-	searchCmd.Flags().IntVarP(&episode, "episode", "e", 0, "The episode number in a serie's season.")
-	searchCmd.Flags().StringVarP(&subtitleFormat, "format", "f", "srt", "The subtitle format to download.")
-	searchCmd.Flags().IntVarP(&releaseYear, "year", "y", 0, "The release year of the movie or show to reduce ambiguity.")
-	searchCmd.Flags().StringVar(&outputFile, "output-file", "", "The output file name for downloaded subtitle.")
-	searchCmd.Flags().StringVar(&outputDir, "output-dir", "", "The output directory name for downloaded subtitle.")
-	searchCmd.Flags().IntVar(&imdbID, "imdb-id", 0, "Search for show or movie using imdb ID.")
-	searchCmd.Flags().BoolVar(&autoSelect, "auto", false, "Automatically select one subtitle to download without asking user.")
-	searchCmd.Flags().BoolVar(&isMovie, "movie", false, "Specifies that the query is a movie to reduce ambiguity")
-	searchCmd.Flags().BoolVar(&isSerie, "serie", false, "Specifies that the query is for a serie to reduce ambiguity")
-	return &searchCmd
+	dlCmd.Flags().SortFlags = false
+	dlCmd.Flags().StringVarP(&subtitleLang, "lang", "l", "en", "The Language for the subtitle to download")
+	dlCmd.Flags().IntVarP(&season, "season", "s", 0, "The season if getting subtitles for a serie.")
+	dlCmd.Flags().IntVarP(&episode, "episode", "e", 0, "The episode number in a serie's season.")
+	dlCmd.Flags().StringVarP(&subtitleFormat, "format", "f", "srt", "The subtitle format to download.")
+	dlCmd.Flags().IntVarP(&releaseYear, "year", "y", 0, "The release year of the movie or show")
+	dlCmd.Flags().StringVar(&outputFile, "output-file", "", "The output file name for downloaded subtitle.")
+	dlCmd.Flags().StringVar(&outputDir, "output-dir", "", "The output directory name for downloaded subtitle.")
+	dlCmd.Flags().IntVar(&imdbID, "imdb-id", 0, "Download a show or movie using imdb ID.")
+	dlCmd.Flags().BoolVar(&autoSelect, "auto", false, "Automatically select one subtitle to download without asking user.")
+	dlCmd.Flags().BoolVar(&isMovie, "movie", false, "Specifies that the query is for a movie to reduce ambiguity")
+	dlCmd.Flags().BoolVar(&isSerie, "serie", false, "Specifies that the query is for a serie to reduce ambiguity")
+	return &dlCmd
 }
 
 func addAllProvidersToSet(providerSet *providers.ProviderSet) {
