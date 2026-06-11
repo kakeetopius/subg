@@ -18,17 +18,17 @@ func LoginCmd() *cobra.Command {
 		Short:   "Authenticate to a subtitle provider",
 		Aliases: []string{"l"},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			providerToUse := viperConfig.GetString("provider")
+			providerToUse := appConfig.GetString("provider")
 			if providerToUse == "" {
 				return fmt.Errorf("please specify provider to authenticate to. Use subg login --help for more information")
 			}
 			switch providerToUse {
 			case "os":
 				return opensubtitles.Login(opensubtitles.LoginOptions{
-					UserName: viperConfig.GetString("opensubtitles.username"),
-					Password: viperConfig.GetString("opensubtitles.password"),
-					APIKey:   viperConfig.GetString("opensubtitles.api_key"),
-					CacheDir: viperConfig.GetString("cache_dir"),
+					UserName: appConfig.GetString("opensubtitles.username"),
+					Password: appConfig.GetString("opensubtitles.password"),
+					APIKey:   appConfig.GetString("opensubtitles.api_key"),
+					CacheDir: appConfig.GetString("cache_dir"),
 				})
 			case "sd":
 				fmt.Println("Provider subdl.com doesn't need any authentication. The provider only requires an api key that can be passed via the --api-key flag or via the SUBDL_API_KEY or in the configuration file.")
@@ -49,8 +49,8 @@ func LoginCmd() *cobra.Command {
 	userNamePflag := loginCmd.Flags().Lookup("username")
 	passwordPflag := loginCmd.Flags().Lookup("password")
 
-	viperConfig.BindPFlag("opensubtitles.username", userNamePflag)
-	viperConfig.BindPFlag("opensubtitles.password", passwordPflag)
+	appConfig.BindPFlag("opensubtitles.username", userNamePflag)
+	appConfig.BindPFlag("opensubtitles.password", passwordPflag)
 
 	return &loginCmd
 }

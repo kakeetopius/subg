@@ -44,7 +44,7 @@ func SearchCmd() *cobra.Command {
 				}
 			}()
 
-			providerToUse := viperConfig.GetString("provider")
+			providerToUse := appConfig.GetString("provider")
 			query := args[0]
 			// Set the outputDir to current working directory if not given
 			if outputDir == "" {
@@ -116,7 +116,7 @@ func SearchCmd() *cobra.Command {
 }
 
 func searchAndDownloadWithOpenSubtitles(query string) error {
-	api := viperConfig.GetString("opensubtitles.api_key")
+	api := appConfig.GetString("opensubtitles.api_key")
 
 	if api == "" {
 		return fmt.Errorf("open subtitle API Key not given. You can provide it with the --api-key flag or in the configuration file or via the environment variable OPENSUBTITLES_API_KEY ")
@@ -130,7 +130,7 @@ func searchAndDownloadWithOpenSubtitles(query string) error {
 		Year:          releaseYear,
 
 		APIKey:   api,
-		CacheDir: viperConfig.GetString("cache_dir"),
+		CacheDir: appConfig.GetString("cache_dir"),
 	}
 
 	// the featureTypes "all", "movie", "episode" is what is required by the opensubtitles wrapper.
@@ -167,8 +167,8 @@ func searchAndDownloadWithOpenSubtitles(query string) error {
 		OutPutFile: outputFile,
 		OutPutDir:  outputDir,
 
-		APIKey:   viperConfig.GetString("opensubtitles.api_key"),
-		CacheDir: viperConfig.GetString("cache_dir"),
+		APIKey:   appConfig.GetString("opensubtitles.api_key"),
+		CacheDir: appConfig.GetString("cache_dir"),
 	})
 	if err != nil {
 		return err
@@ -206,7 +206,7 @@ func searchAndDownloadWithAddic7ed(query string) error {
 
 func searchAndDownloadWithSubdl(query string) error {
 	searchOptions := subdl.SearchParams{
-		APIKey: viperConfig.GetString("subdl.api_key"),
+		APIKey: appConfig.GetString("subdl.api_key"),
 		Query:  &query,
 	}
 

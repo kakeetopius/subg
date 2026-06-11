@@ -7,6 +7,16 @@ type SubtitleSearchResult interface {
 	// BestSubtitle() -> Get best subtitle from result Set
 }
 
+type Provider interface {
+	SearchSubtitle() SubtitleSearchResult
+
+	DisplayTable()
+
+	DownloadSubtitle(id string)
+
+	NextProvider()
+}
+
 type Subtitle interface {
 	Download(downloadOptions any) error
 }

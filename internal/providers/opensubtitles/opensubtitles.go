@@ -238,6 +238,7 @@ func NewClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.
 		if errors.Is(err, os.ErrNotExist) {
 			return nil, fmt.Errorf("could not find cached opensubtitle credentials. Try subg login --provider os to login to opensubtitles.com")
 		}
+		return nil, err
 	}
 
 	var authResp opensubtitles.LoginResponse
