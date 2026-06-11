@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/angelospk/opensubtitles-go"
-	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
 )
@@ -27,29 +26,6 @@ type LoginOptions struct {
 	CacheDir string
 }
 
-type SearchOptions struct {
-	Query         string
-	IMDBId        int
-	SeasonNumber  int
-	EpisodeNumber int
-	Languages     string
-	Type          string
-	Year          int
-
-	APIKey   string
-	CacheDir string
-}
-
-type DownloadOptions struct {
-	Subtitle   *OSSubtitle
-	FileID     int
-	Format     string
-	OutPutFile string
-	OutPutDir  string
-
-	APIKey   string
-	CacheDir string
-}
 type OSSubtitle struct {
 	SubtitleID     string
 	Release        string
@@ -76,34 +52,13 @@ type SubtitleFile struct {
 	FileName string
 }
 
-type SearchResults []OSSubtitle
-
-func (r SearchResults) SubtitleByID(id string) (providers.Subtitle, error) {
-	for _, sub := range r {
-		if sub.SubtitleID == id {
-			return &sub, nil
-		}
-	}
-
-	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
-}
-
-func (s *OSSubtitle) Download(opts any) error {
-	var dlOpts DownloadOptions
-	var ok bool
-	if dlOpts, ok = opts.(DownloadOptions); !ok {
-		return fmt.Errorf("wrong download options given")
-	}
-
-	dlOpts.Subtitle = s
-	return DownloadSubtitle(dlOpts)
-}
-
 func Login(opts LoginOptions) error {
 	if opts.UserName == "" {
 		return fmt.Errorf("username cannot be empty")
 	} else if opts.Password == "" {
 		return fmt.Errorf("password cannot be empty")
+	} else if opts.APIKey == "" {
+		return fmt.Errorf("API Key is required to use opensubtitles")
 	}
 
 	authFile := path.Join(opts.CacheDir, CachedCredentialsFile)
@@ -149,7 +104,11 @@ func Login(opts LoginOptions) error {
 	return nil
 }
 
-func SearchSubtitle(opts SearchOptions) (SearchResults, error) {
+func searchSubtitle(opts options) ([]OSSubtitle, error) {
+	if opts.APIKey == "" {
+		return nil, fmt.Errorf("API Key is required to download from opensubtitles")
+	}
+
 	// To search from opensubtitles the user only needs an api key no need for login
 	client, err := opensubtitles.NewClient(opensubtitles.Config{
 		ApiKey:    opts.APIKey,
@@ -160,7 +119,7 @@ func SearchSubtitle(opts SearchOptions) (SearchResults, error) {
 	}
 	searchParams := opensubtitles.SearchSubtitlesParams{
 		Query:     &opts.Query,
-		Languages: &opts.Languages,
+		Languages: &opts.Language,
 		Type:      &opts.Type,
 	}
 
@@ -170,11 +129,11 @@ func SearchSubtitle(opts SearchOptions) (SearchResults, error) {
 	if opts.IMDBId != 0 {
 		searchParams.IMDbID = &opts.IMDBId
 	}
-	if opts.SeasonNumber != 0 {
-		searchParams.SeasonNumber = &opts.SeasonNumber
+	if opts.Season != 0 {
+		searchParams.SeasonNumber = &opts.Season
 	}
-	if opts.EpisodeNumber != 0 {
-		searchParams.EpisodeNumber = &opts.EpisodeNumber
+	if opts.Episode != 0 {
+		searchParams.EpisodeNumber = &opts.Episode
 	}
 
 	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on OpenSubtitles.........")
@@ -224,7 +183,7 @@ func SearchSubtitle(opts SearchOptions) (SearchResults, error) {
 	return subtitles, nil
 }
 
-func NewClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.Client, error) {
+func newClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.Client, error) {
 	client, err := opensubtitles.NewClient(opensubtitles.Config{
 		ApiKey:    apiKey,
 		UserAgent: "",
@@ -251,22 +210,22 @@ func NewClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.
 	return client, nil
 }
 
-func DownloadSubtitle(opts DownloadOptions) error {
+func downloadSubtitle(opts options, subtitle *OSSubtitle) error {
 	// To download from opensubtitles the user must have already logged in a session info cached.
-	client, err := NewClientFromCachedConfigs(opts.APIKey, opts.CacheDir)
+	client, err := newClientFromCachedConfigs(opts.APIKey, opts.CacheDir)
 	if err != nil {
 		return err
 	}
-	if len(opts.Subtitle.Files) == 0 {
+	if len(subtitle.Files) == 0 {
 		return fmt.Errorf("no files to download for selected subtitle")
 	}
-	file2Download := opts.Subtitle.Files[0]
+	file2Download := subtitle.Files[0]
 	downloadRequest := opensubtitles.DownloadRequest{
 		FileID:    file2Download.FileID,
-		SubFormat: &opts.Format,
+		SubFormat: &opts.SubtitleFormat,
 	}
 	if opts.OutPutFile == "" {
-		opts.OutPutFile = fmt.Sprintf("%v.%v", file2Download.FileName, opts.Format)
+		opts.OutPutFile = fmt.Sprintf("%v.%v", file2Download.FileName, opts.SubtitleFormat)
 	}
 
 	opts.OutPutFile = path.Join(opts.OutPutDir, opts.OutPutFile)

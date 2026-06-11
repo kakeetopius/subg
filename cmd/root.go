@@ -47,9 +47,9 @@ func Execute() {
 
 func init() {
 	var (
-		apiKey   string
-		cacheDir string
-		provider string
+		apiKey    string
+		cacheDir  string
+		providers []string
 	)
 
 	appConfig = viper.New()
@@ -71,8 +71,8 @@ func init() {
 	appConfig.BindPFlag("subdl.api_key", apiKeyPflag)
 	appConfig.BindEnv("subdl.api_key", "SUBDL_API_KEY")
 
-	rootCmd.PersistentFlags().StringVar(&provider, "provider", "", "The provider to use.")
-	appConfig.BindPFlag("provider", rootCmd.PersistentFlags().Lookup("provider"))
+	rootCmd.PersistentFlags().StringSliceVarP(&providers, "providers", "p", nil, "The provider to use.")
+	appConfig.BindPFlag("providers", rootCmd.PersistentFlags().Lookup("providers"))
 
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Run in debug mode.")
 

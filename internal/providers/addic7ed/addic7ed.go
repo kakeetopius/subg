@@ -10,20 +10,6 @@ import (
 	"github.com/pterm/pterm"
 )
 
-type SearchOptions struct {
-	Query    string
-	Episode  int
-	Season   int
-	Language string
-}
-
-type DownloadOptions struct {
-	Subtitle A7Subtitle
-
-	OutPutFile string
-	OutPutDir  string
-}
-
 type A7Subtitle struct {
 	ID       int
 	Language string
@@ -31,34 +17,7 @@ type A7Subtitle struct {
 	Link     string
 }
 
-type SearchResult struct {
-	Name      string
-	Subtitles []A7Subtitle
-}
-
-func (r SearchResult) SubtitleByID(id string) (providers.Subtitle, error) {
-	for _, sub := range r.Subtitles {
-		idStr := fmt.Sprint(sub.ID)
-		if idStr == id {
-			return &sub, nil
-		}
-	}
-
-	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
-}
-
-func (s *A7Subtitle) Download(dlOpts any) error {
-	var opts DownloadOptions
-	var ok bool
-	if opts, ok = dlOpts.(DownloadOptions); !ok {
-		return fmt.Errorf("wrong download options given")
-	}
-
-	opts.Subtitle = *s
-	return DownloadSubtitle(opts)
-}
-
-func SearchSubtitle(opts SearchOptions) (SearchResult, error) {
+func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 	client := addic7ed.New()
 
 	showName := opts.Query
@@ -70,26 +29,23 @@ func SearchSubtitle(opts SearchOptions) (SearchResult, error) {
 	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on addic7ed.com..........")
 	if err != nil {
 		spinner.Fail()
-		return SearchResult{}, err
+		return nil, err
 	}
 
 	show, err := client.SearchAll(showName)
 	if err != nil {
 		spinner.Fail()
-		return SearchResult{}, err
+		return nil, err
 	}
 	if opts.Language != "" {
 		show.Subtitles = show.Subtitles.Filter(addic7ed.WithLanguage(LanguageFullForm(opts.Language)))
 	}
 
-	subtitle := SearchResult{
-		Name:      show.Name,
-		Subtitles: make([]A7Subtitle, 0, len(show.Subtitles)),
-	}
+	subtitles := make([]A7Subtitle, 0, len(show.Subtitles))
 
 	id := 1000
 	for _, sub := range show.Subtitles {
-		subtitle.Subtitles = append(subtitle.Subtitles, A7Subtitle{
+		subtitles = append(subtitles, A7Subtitle{
 			ID:       id,
 			Language: sub.Language,
 			Version:  sub.Version,
@@ -99,14 +55,14 @@ func SearchSubtitle(opts SearchOptions) (SearchResult, error) {
 	}
 
 	spinner.Success("Search Done")
-	return subtitle, nil
+	return subtitles, nil
 }
 
-func DownloadSubtitle(opts DownloadOptions) error {
+func downloadSubtitle(sub *A7Subtitle, opts providers.Options) error {
 	subtitle := addic7ed.Subtitle{
-		Language: opts.Subtitle.Language,
-		Version:  opts.Subtitle.Version,
-		Link:     opts.Subtitle.Link,
+		Language: opts.Language,
+		Version:  sub.Version,
+		Link:     sub.Link,
 	}
 
 	fileName := fmt.Sprintf("%v.%v", opts.OutPutFile, "srt")

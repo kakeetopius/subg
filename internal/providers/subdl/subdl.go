@@ -14,7 +14,10 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func SearchSubtitles(opts SearchParams) (*SearchResults, error) {
+func searchSubtitles(opts options) ([]SDSubtitle, error) {
+	if opts.APIKey == "" {
+		return nil, fmt.Errorf(" An API Key is required to use subdl.com")
+	}
 	c, err := NewClient(Config{
 		APIKey: opts.APIKey,
 	})
@@ -22,15 +25,39 @@ func SearchSubtitles(opts SearchParams) (*SearchResults, error) {
 		return nil, err
 	}
 
+	searchParams := SearchParams{}
+	searchParams.Query = &opts.Query
+
+	if opts.Season != 0 {
+		searchParams.SeasonNumber = &opts.Season
+	}
+	if opts.Episode != 0 {
+		searchParams.EpisodeNumber = &opts.Episode
+	}
+	if opts.IMDBId != 0 {
+		searchParams.IMDBId = &opts.IMDBId
+	}
+	if opts.Year != 0 {
+		searchParams.Year = &opts.Year
+	}
+	if opts.Language != "" {
+		searchParams.Languages = &opts.Language
+	}
+
 	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on subdl.com.........")
 	if err != nil {
 		return nil, err
 	}
-	results, err := c.SearchSubtitles(context.Background(), opts)
+	results, err := c.SearchSubtitles(context.Background(), searchParams)
 	if err != nil {
 		spinner.Fail()
 		return nil, err
 	}
+
+	if !results.Status {
+		return nil, fmt.Errorf("could not get subtitles from subdl")
+	}
+
 	id := 1000
 	for i := range results.Subtitles {
 		results.Subtitles[i].ID = id
@@ -38,18 +65,18 @@ func SearchSubtitles(opts SearchParams) (*SearchResults, error) {
 	}
 
 	spinner.Success("Search Done")
-	return results, nil
+	return results.Subtitles, nil
 }
 
-func DownloadSubtitle(opts DownloadOptions) (err error) {
-	if opts.Subtitle == nil {
+func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
+	if subtitle == nil {
 		return fmt.Errorf("no subtitle provided for download")
 	}
-	url := SUBDLDOWNLOADURL + opts.Subtitle.URL
+	url := SUBDLDOWNLOADURL + subtitle.URL
 
 	zipOutfile := opts.OutPutFile
 	if zipOutfile == "" {
-		zipOutfile = fmt.Sprintf("%v.%v", opts.Subtitle.ReleaseName, "zip")
+		zipOutfile = fmt.Sprintf("%v.%v", subtitle.ReleaseName, "zip")
 	}
 
 	zipOutfile = path.Join(opts.OutPutDir, zipOutfile)
