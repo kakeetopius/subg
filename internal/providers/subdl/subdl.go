@@ -117,7 +117,6 @@ func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
 		return err
 	}
 
-	pterm.Info.Printf("Zip file downloaded successfully to: %v \n", zipOutfile)
 	pterm.Info.Printf("Extracting zip file...............\n")
 	return extractSubtitlesFromZip(zipBytesReader, opts)
 }

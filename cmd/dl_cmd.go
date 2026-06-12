@@ -1,15 +1,15 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
-	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/providers/addic7ed"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
 	"github.com/kakeetopius/subg/internal/providers/subdl"
+	"github.com/kakeetopius/subg/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -54,22 +54,12 @@ The following is the list of supported providers so far in order of priority.
 				}
 			}
 
-			var formatType formats.FormatType
-			if outputFile != "" {
-				outFileExt := filepath.Ext(outputFile)
-				fType, ferr := formats.SubFormatTypeFromString(outFileExt)
-				if ferr != nil {
-					return ferr
+			formatType, err := util.SubFormatFromFileNameOrFormatString(outputFile, subtitleFormat)
+			if err != nil {
+				if errors.Is(err, util.ErrCouldNotDetermineFormat) {
+					return fmt.Errorf("could not determine which format to download. use either the --format flag or give an output file with the correct extension")
 				}
-				formatType = fType
-			} else if subtitleFormat != "" {
-				fType, ferr := formats.SubFormatTypeFromString(subtitleFormat)
-				if ferr != nil {
-					return ferr
-				}
-				formatType = fType
-			} else {
-				return fmt.Errorf("could not determine which format to download.\nprovide either an output file name or use the --format flag")
+				return err
 			}
 
 			providerSet := providers.NewProviderSet(args)

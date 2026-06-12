@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/util"
@@ -31,22 +31,12 @@ Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 				return err
 			}
 
-			var formatType formats.FormatType
-			if outFile != "" {
-				outFileExt := filepath.Ext(outFile)
-				fType, ferr := formats.SubFormatTypeFromString(outFileExt)
-				if ferr != nil {
-					return ferr
+			formatType, err := util.SubFormatFromFileNameOrFormatString(outFile, convertTo)
+			if err != nil {
+				if errors.Is(err, util.ErrCouldNotDetermineFormat) {
+					return fmt.Errorf("could not determine which format to convert to. use either the --convert-to flag or give an output file with the correct extension")
 				}
-				formatType = fType
-			} else if convertTo != "" {
-				fType, ferr := formats.SubFormatTypeFromString(convertTo)
-				if ferr != nil {
-					return ferr
-				}
-				formatType = fType
-			} else {
-				return fmt.Errorf("could not determine which format to convert to.\nprovide either an output file name or use the --convert-to flag")
+				return err
 			}
 
 			if outFile == "" {
@@ -73,7 +63,7 @@ Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 	convertCmd.MarkFlagFilename("in", "srt", "vtt", "ass", "ssa", "ttml", "stl")
 
 	convertCmd.Flags().StringVarP(&outFile, "out", "o", "", "The output file name.")
-	convertCmd.Flags().StringVarP(&convertTo, "convert-to", "c", "", "The format to convert to (ignored if output file name is given)")
+	convertCmd.Flags().StringVarP(&convertTo, "convert-to", "c", "", "The format to convert to")
 
 	return &convertCmd
 }
