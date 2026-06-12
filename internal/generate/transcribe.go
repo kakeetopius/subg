@@ -32,6 +32,7 @@ type TransciberOptions struct {
 const (
 	transcriberName   = "whisper-ctranslate2"
 	transcriberEnvDir = "transcriber"
+	defaultModelName  = "large-v3-turbo"
 )
 
 func Transcribe(opts TransciberOptions) error {
@@ -82,12 +83,17 @@ func transcribeFile(opts *TransciberOptions) error {
 		return err
 	}
 
-	args := buildArgs(opts.InputFiles, []string{
-		"--model", defaultVal(opts.Model, "turbo"),
-		"--language", defaultVal(opts.Language, "en"),
+	flags := []string{
+		"--model", defaultVal(opts.Model, defaultModelName),
 		"--output_dir", defaultVal(opts.OutPutDir, cwd),
 		"--output_format", "srt",
-	})
+	}
+
+	if opts.Language == "" {
+		flags = append(flags, "--language", opts.Language)
+	}
+
+	args := buildArgs(opts.InputFiles, flags)
 
 	return runTranscriber(opts, args)
 }
@@ -99,14 +105,18 @@ func translateFiles(opts *TransciberOptions) error {
 	if err != nil {
 		return err
 	}
-
-	args := buildArgs(opts.InputFiles, []string{
-		"--model", defaultVal(opts.Model, "turbo"),
+	flags := []string{
+		"--model", defaultVal(opts.Model, defaultModelName),
 		"--task", "translate",
-		"--language", defaultVal(opts.Language, "en"),
 		"--output_dir", defaultVal(opts.OutPutDir, cwd),
 		"--output_format", "srt",
-	})
+	}
+
+	if opts.Language != "" {
+		flags = append(flags, "--language", opts.Language)
+	}
+
+	args := buildArgs(opts.InputFiles, flags)
 
 	return runTranscriber(opts, args)
 }
@@ -121,19 +131,14 @@ func runTranscriber(opts *TransciberOptions, args []string) error {
 
 	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", "HF_TOKEN", opts.HFToken))
 
-	if opts.Verbose {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-
-	err := cmd.Run()
+	err := runCmd(cmd, opts.Verbose)
 	if err != nil {
 		return err
 	}
+
 	if opts.SubtitleFormat != formats.FormatTypeSRT {
 		return convertFilesToGivenFormat(opts)
 	}
-
 	return nil
 }
 
@@ -201,12 +206,7 @@ func initTranscirberPyEnv(cacheDir string, verbose bool) error {
 		"python", "-m", "venv", transcriberEnvPath,
 	)
 
-	if verbose {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-
-	return cmd.Run()
+	return runCmd(cmd, verbose)
 }
 
 func installTranscriber(cacheDir string, verbose bool) error {
@@ -225,12 +225,7 @@ func installTranscriber(cacheDir string, verbose bool) error {
 		pip, "install", transcriberName,
 	)
 
-	if verbose {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-
-	return cmd.Run()
+	return runCmd(cmd, verbose)
 }
 
 func defaultVal(try string, defaultVal string) string {
@@ -259,6 +254,25 @@ func validateInputFiles(inFiles []string) error {
 	for _, file := range inFiles {
 		if !util.FileExists(file) {
 			return fmt.Errorf(" The file \"%s\" does not exist", file)
+		}
+	}
+
+	return nil
+}
+
+func runCmd(cmd *exec.Cmd, verbose bool) error {
+	if verbose {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+	} else {
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Println(string(output))
+			return err
 		}
 	}
 

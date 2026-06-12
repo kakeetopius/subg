@@ -33,21 +33,25 @@ func GenCmd() *cobra.Command {
 				InputFiles:     args,
 				SubtitleFormat: subFormat,
 				Translate:      translate,
+				OutPutDir:      outputDir,
+				Language:       language,
+
+				Model: model,
 			})
 		},
 	}
 
 	genCmd.Flags().SortFlags = false
 	genCmd.Flags().BoolVar(&verbose, "verbose", false, "Print extra information of what is going on.")
-	genCmd.Flags().StringVarP(&language, "lang", "l", "en", "The language of the input file(s)")
+	genCmd.Flags().StringVarP(&language, "language", "l", "", "The language of the input file(s)")
 	genCmd.Flags().StringVarP(&subtitleFormat, "format", "f", "srt", "The format to save the subtitle file(s) as.")
 	genCmd.Flags().StringVar(&outputDir, "output-dir", "", "The directory to save the subtitles files to.")
-	genCmd.Flags().BoolVarP(&verbose, "translate", "t", false, "Translate the file(s) given to English instead of transcribing")
+	genCmd.Flags().BoolVarP(&translate, "translate", "t", false, "Translate the file(s) given to English instead of transcribing")
 
 	genCmd.Flags().String("hf-token", "", "The Hugging Face Access Token to access transcribing models.")
 	appConfig.BindPFlag("transcriber.hf_token", genCmd.Flags().Lookup("hf-token"))
 	appConfig.BindEnv("transcriber.hf_token", "HF_TOKEN")
 
-	genCmd.Flags().StringVarP(&model, "model", "m", "turbo", "The whisper model to use (tiny, medium, large-v3, turbo etc). See https://github.com/openai/whisper/blob/main/model-card.md for more information.")
+	genCmd.Flags().StringVarP(&model, "model", "m", "large-v3-turbo", "The whisper model to use (tiny, medium, large-v3, turbo etc). See https://github.com/openai/whisper/blob/main/model-card.md for more information.")
 	return &genCmd
 }
