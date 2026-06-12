@@ -113,7 +113,7 @@ subg download <query> [flags]
 
 ### generate
 
-Generate subtitles from a video or audio file using [OpenAI Whisper](https://github.com/openai/whisper). Aliases: `gen`, `g`.
+Generate subtitles from a video or audio file using [whisper-ctranslate2](https://github.com/Softcatala/whisper-ctranslate2). Aliases: `gen`, `g`.
 
 > [!IMPORTANT]
 > This command requires [Python](https://www.python.org/) and [FFmpeg](https://ffmpeg.org/) to be installed on your system. Other dependencies are installed automatically by subg.
