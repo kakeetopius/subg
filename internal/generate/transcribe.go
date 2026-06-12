@@ -35,11 +35,8 @@ const (
 )
 
 func Transcribe(opts TransciberOptions) error {
-	_, err := exec.LookPath("python")
+	err := checkForBinaryDependencies()
 	if err != nil {
-		if errors.Is(err, exec.ErrNotFound) {
-			return fmt.Errorf("python not found in the $PATH. python is required to run the transcriber. Install python first and then try to transcribe again. ")
-		}
 		return err
 	}
 
@@ -263,6 +260,26 @@ func validateInputFiles(inFiles []string) error {
 		if !util.FileExists(file) {
 			return fmt.Errorf(" The file \"%s\" does not exist", file)
 		}
+	}
+
+	return nil
+}
+
+func checkForBinaryDependencies() error {
+	_, err := exec.LookPath("python")
+	if err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			return fmt.Errorf("python not found in the $PATH. python is required to run the transcriber. Install it first (or add it to $PATH) and then try to transcribe again. ")
+		}
+		return err
+	}
+
+	_, err = exec.LookPath("ffmpeg")
+	if err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			return fmt.Errorf("ffmpeg not found in the $PATH. ffmpeg is required by the transcriber. Install it first (or add it to $PATH) and then try to transcribe again. ")
+		}
+		return err
 	}
 
 	return nil

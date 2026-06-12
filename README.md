@@ -1,15 +1,17 @@
 # subg
 
-A command-line tool for searching and downloading movie and TV series subtitles.
+A command-line tool for searching, downloading, generating, and converting subtitles.
 
 ## Features
 
 - Search for subtitles by movie/series name, IMDB ID, or other criteria
 - Filter by language, release year, season, and episode
-- Download subtitles in multiple formats (SRT, VTT, etc.)
-- Fallback to other subtitle providers in case Open Subtitles fails. (A few so far. See Below)
+- Download subtitles in multiple formats (SRT, VTT, ASS, SSA, TTML, STL)
+- Convert subtitles from one format to another
+- Generate subtitles from video or audio files using Whisper
+- Fallback to other subtitle providers in case the primary one fails
 - Support for both movies and TV series
-- Automatic subtitle selection (not yet implemented)
+- Automatic subtitle selection
 
 ## Installation
 
@@ -19,8 +21,8 @@ go install github.com/kakeetopius/subg@latest
 
 ## Subtitle Providers
 
-subg can download subtitles from different providers. The following is a list of supported providers in order of priority together with their codes that can be passed
-via the --provider flag or in the configuration file. (See Below)
+subg can download subtitles from different providers. The following is a list of supported providers so far in order of priority together with their codes that can be passed
+via the `--providers` flag or in the configuration file (see below).
 
 | Provider          | Code |
 | ----------------- | ---- |
@@ -29,7 +31,8 @@ via the --provider flag or in the configuration file. (See Below)
 | addic7ed.com      | a7   |
 
 > [!NOTE]
-> If a provider is not specified using the flag --provider or using the configuration file (See Below), all providers are tried in the order shown above.
+> If no provider is specified via the `--providers` flag or the configuration file, all providers are tried in the order shown above.  
+> Multiple providers can be specified at once (e.g. --providers os,sd). Providers are then tried in the order given.
 
 ## Quick Start
 
@@ -38,69 +41,131 @@ via the --provider flag or in the configuration file. (See Below)
 Before you can search and download subtitles specifically using Open Subtitles, you must authenticate with OpenSubtitles:
 
 ```bash
-subg login --provider os --username <your_username> --password <your_password>
+subg login --providers os --username <your_username> --password <your_password>
 ```
 
 - You can sign up for a free OpenSubtitles account at [opensubtitles.com](https://www.opensubtitles.com/).
-- For the provider subdl.com only the api key is required. It can be obtained here [subdl.com](https://subdl.com/).
-- For the provider addic7ed.com no login or api key is required.
+- For subdl.com only an API key is required. It can be obtained at [subdl.com](https://subdl.com/).
+- For addic7ed.com no login or API key is required.
 
-### 2. Search and Download Subtitles
+### 2. Download Subtitles
 
 ```bash
-# Search for a movie subtitle in English
-subg search "In the Heights"
+# Download a movie subtitle in English
+subg download "In the Heights"
 
-# Search for a TV series subtitle
-subg search "Bridge and Tunnel" --season 1 --episode 5 --lang en
+# Download a TV series subtitle
+subg download "Bridge and Tunnel" --season 1 --episode 5 --lang en
 
 # Download with custom output
-subg search "Grown Ups 2" --lang en --output-file GU2.srt --output-dir ./subtitles
+subg download "Grown Ups 2" --lang en --output-file GU2.srt --output-dir ./subtitles
 ```
 
-## Usage
-
-### search
-
-Search and download subtitles for a movie or show.
+### 3. Generate Subtitles from Video or Audio
 
 ```bash
-subg search <query> [flags]
+# Generate subtitles from a video file
+subg generate movie.mp4
+
+# Generate and translate to English
+subg generate movie.mp4 --translate
+
+# Use a specific Whisper model
+subg generate movie.mp4 --model large-v3
+```
+
+### 4. Convert Subtitles
+
+```bash
+# Convert an SRT file to VTT
+subg convert --in subtitle.srt --out subtitle.vtt
+
+# Convert using the --convert-to flag (output filename is derived from input with only the extension changed)
+subg convert --in subtitle.srt --convert-to ass
+```
+
+## Sample Usage
+
+### download
+
+Search and download subtitles for a movie or TV show. Aliases: `dl`, `d`.
+
+```bash
+subg download <query> [flags]
 ```
 
 <details>
 <summary>Flags</summary>
 
-- `--lang` - Subtitle language code (default: "en")
-- `--season` - TV series season number
-- `--episode` - TV series episode number
-- `--format` - Subtitle format to download (default: "srt")
-- `--year` - Release year to reduce ambiguity
-- `--output-file` - Custom output filename
+- `--lang, -l` - Subtitle language code (default: `"en"`)
+- `--season, -s` - TV series season number
+- `--episode, -e` - TV series episode number
+- `--format, -f` - Subtitle format to download (default: `"srt"`)
+- `--year, -y` - Release year to reduce ambiguity
+- `--output-file, -o` - Custom output filename
 - `--output-dir` - Output directory for downloaded subtitle
 - `--imdb-id` - Search using IMDB ID
-- `--movie` - Specify query is a movie
-- `--serie` - Specify query is a TV series
-- `--provider` - The specific provider to use. See the different providers below. (Note that if this is set no fallback will be done if any errors occur)
-- `--auto` - Automatically select first result without prompting
+- `--movie` - Specify that the query is for a movie
+- `--serie` - Specify that the query is for a TV series
+- `--providers, -p` - The provider(s) to use as a comma-separated list (e.g. `os,sd`). If set, no fallback is done on failure.
+- `--auto` - Automatically select the first result without prompting
+</details>
+
+### generate
+
+Generate subtitles from a video or audio file using [OpenAI Whisper](https://github.com/openai/whisper). Aliases: `gen`, `g`.
+
+> [!IMPORTANT]
+> This command requires [Python](https://www.python.org/) and [FFmpeg](https://ffmpeg.org/) to be installed on your system. Other dependencies are installed automatically by subg.
+
+```bash
+subg generate files... [flags]
+```
+
+<details>
+<summary>Flags</summary>
+
+- `--lang, -l` - The language of the input file(s) (default: `"en"`)
+- `--format, -f` - The subtitle format to save as (default: `"srt"`)
+- `--output-dir` - The directory to save the subtitle files to
+- `--translate, -t` - Translate the audio to English instead of transcribing in the original language
+- `--model, -m` - The Whisper model to use: `tiny`, `medium`, `large-v3`, `turbo`, etc. (default: `"turbo"`). See the [model card](https://github.com/openai/whisper/blob/main/model-card.md) for more information.
+- `--hf-token` - A Hugging Face access token to access transcribing models
+- `--verbose` - Print extra information about what is happening
+</details>
+
+### convert
+
+Convert a subtitle file from one format to another. Alias: `c`.
+
+Supported formats: `srt`, `vtt`, `ass`, `ssa`, `ttml`, `stl`.
+
+```bash
+subg convert --in <input-file> [flags]
+```
+
+<details>
+<summary>Flags</summary>
+
+- `--in, -i` - The input subtitle file **(required)**
+- `--out, -o` - The output file name. If not given, the output filename is derived from the input filename.
+- `--convert-to, -c` - The format to convert to. Required if `--out` is not given with a recognizable extension.
 </details>
 
 ### login
 
-To download from some providers like opensubtitles the user must first authenticate to the subtitle provider.
-For others like addic7ed authentication is not required.
+Authenticate to a subtitle provider. Alias: `l`.
 
 ```bash
-subg login --provider <provider> [flags]
+subg login --providers <provider> [flags]
 ```
 
 <details>
 <summary>Flags</summary>
 
-- `--provider, -p` - Provider to authenticate to
+- `--providers, -p` - Provider(s) to authenticate to
 - `--username, -u` - Account username
 - `--password, -P` - Account password
-
 </details>
 
 ## Configuration
@@ -130,35 +195,43 @@ Place a `subg.toml` file in one of these locations:
 **Example `subg.toml`:**
 
 ```toml
-#if you want to only use a specific provider, you can specify here. (See above for the different codes.)
-provider = "a7"
+# Specify one or more providers to use by default. (See above for codes.)
+providers = ["os", "sd"]
 
-#directory to store temporary information like JWT tokens for an opensubtitles session.
+# Directory to store temporary information like JWT tokens for an OpenSubtitles session.
 cache_dir = "$HOME/.cache/subg"
 
 [opensubtitles]
-#NOTE that the opensubtitles api key is required if using opensubtitles to search and download. It can be set here or passed via the --api-key flag.
+# The OpenSubtitles API key is required when using OpenSubtitles.
+# It can be set here or passed via the --api-key flag.
 api_key = "your-api-key-here"
-#The username and password are used when logging in to opensubtitles. They can be set here or can be passed via corresponding flags.
+# Username and password used when logging in to OpenSubtitles.
+# They can be set here or passed via corresponding flags.
 username = "your-username"
 password = "your-password"
 
 [subdl]
-#NOTE that for subdl.com only the api key is required for both search and download. It can be set here or passed via the --api-key flag.
+# For subdl.com only the API key is required.
+# It can be set here or passed via the --api-key flag.
 api_key = "subdl_api_key"
+
+[transcriber]
+# Hugging Face access token for accessing Whisper transcribing models.
+# It can be set here or passed via the --hf-token flag or via the env variable HF_TOKEN
+hf_token = "your-hf-token-here"
 ```
 
 ### Environment Variables
 
-- `OPENSUBTITLES_API_KEY` - You can also set API key for OpenSubtitles using this environment variable instead of passing it via a flag or putting it in the configuration file.
-- `SUBDL_API_KEY` - The subdl api key can also be set using this environment variable.
+- `OPENSUBTITLES_API_KEY` - API key for OpenSubtitles
+- `SUBDL_API_KEY` - API key for subdl.com
+- `HF_TOKEN` - Hugging Face Access Token
 
 ## Future Plans
 
-- Support for additional subtitle providers beyond OpenSubtitles
+- Support for additional subtitle providers
 - Batch downloading capabilities
 - Subtitle synchronization and adjustment tools
-- Subtitle generation from a video.
 
 ## License
 

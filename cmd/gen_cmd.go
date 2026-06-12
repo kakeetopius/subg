@@ -46,6 +46,7 @@ func GenCmd() *cobra.Command {
 
 	genCmd.Flags().String("hf-token", "", "The Hugging Face Access Token to access transcribing models.")
 	appConfig.BindPFlag("transcriber.hf_token", genCmd.Flags().Lookup("hf-token"))
+	appConfig.BindEnv("transcriber.hf_token", "HF_TOKEN")
 
 	genCmd.Flags().StringVarP(&model, "model", "m", "turbo", "The whisper model to use (tiny, medium, large-v3, turbo etc). See https://github.com/openai/whisper/blob/main/model-card.md for more information.")
 	return &genCmd
