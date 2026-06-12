@@ -34,6 +34,22 @@ func CreateFileIfNotExists(fileName string) (*os.File, error) {
 	return os.Create(fileName)
 }
 
+func FileExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
+}
+
+func DirExists(path string) bool {
+	info, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	return info.IsDir()
+}
+
 func AddSubFileExtension(file string, fileFormat formats.FormatType) string {
 	outfile := strings.TrimSuffix(file, filepath.Ext(file))
 

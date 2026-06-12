@@ -9,7 +9,7 @@ import (
 type FormatType int
 
 const (
-	FormatTypeSRT FormatType = iota
+	FormatTypeSRT FormatType = iota + 1
 	FormatTypeSTL
 	FormatTypeTTML
 	FormatTypeSSA
