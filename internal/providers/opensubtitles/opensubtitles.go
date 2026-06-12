@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path"
 	"time"
 
 	"github.com/angelospk/opensubtitles-go"
+	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
 )
@@ -210,7 +210,7 @@ func newClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.
 	return client, nil
 }
 
-func downloadSubtitle(opts options, subtitle *OSSubtitle) error {
+func downloadSubtitle(opts options, subtitle *OSSubtitle) (err error) {
 	// To download from opensubtitles the user must have already logged in a session info cached.
 	client, err := newClientFromCachedConfigs(opts.APIKey, opts.CacheDir)
 	if err != nil {
@@ -220,45 +220,58 @@ func downloadSubtitle(opts options, subtitle *OSSubtitle) error {
 		return fmt.Errorf("no files to download for selected subtitle")
 	}
 	file2Download := subtitle.Files[0]
+	format := "srt"
+
 	downloadRequest := opensubtitles.DownloadRequest{
 		FileID:    file2Download.FileID,
-		SubFormat: &opts.SubtitleFormat,
-	}
-	if opts.OutPutFile == "" {
-		opts.OutPutFile = fmt.Sprintf("%v.%v", file2Download.FileName, opts.SubtitleFormat)
+		SubFormat: &format,
 	}
 
+	if opts.OutPutFile == "" {
+		opts.OutPutFile = file2Download.FileName
+	}
+
+	opts.OutPutFile = util.AddSubFileExtension(opts.OutPutFile, opts.SubtitleFormat)
 	opts.OutPutFile = path.Join(opts.OutPutDir, opts.OutPutFile)
+
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
 	if err != nil {
 		return err
 	}
+	defer func() {
+		if err != nil {
+			spinner.Fail()
+		}
+	}()
+
 	downloadResp, err := client.Download(context.Background(), downloadRequest)
 	if err != nil {
-		spinner.Fail()
 		return err
 	}
 
 	httpclient := &http.Client{}
 	resp, err := httpclient.Get(downloadResp.Link)
 	if err != nil {
-		spinner.Fail()
 		return err
 	}
 	defer resp.Body.Close()
 
+	subFormatter, err := formats.NewSubFormat(formats.FormatTypeSRT, resp.Body)
+	if err != nil {
+		return err
+	}
+
 	outFile, err := os.OpenFile(opts.OutPutFile, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
-		spinner.Fail()
 		return err
 	}
 	defer outFile.Close()
 
-	_, err = io.Copy(outFile, resp.Body)
+	err = subFormatter.ConvertToAndWrite(opts.SubtitleFormat, outFile)
 	if err != nil {
-		spinner.Fail()
 		return err
 	}
+
 	spinner.Success("Download Done")
 
 	pterm.Info.Printf("Subtitle downloaded successfully to: %v \n", opts.OutPutFile)

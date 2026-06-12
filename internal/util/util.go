@@ -3,8 +3,13 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path"
+	"path/filepath"
+	"strings"
+
+	"github.com/kakeetopius/subg/internal/formats"
 )
 
 func CreateFileIfNotExists(fileName string) (*os.File, error) {
@@ -22,4 +27,14 @@ func CreateFileIfNotExists(fileName string) (*os.File, error) {
 	}
 
 	return os.Create(fileName)
+}
+
+func AddSubFileExtension(file string, fileFormat formats.FormatType) string {
+	outfile := strings.TrimSuffix(file, filepath.Ext(file))
+
+	return fmt.Sprintf("%s.%s", outfile, fileFormat)
+}
+
+func StripExtension(file string) string {
+	return strings.TrimSuffix(file, filepath.Ext(file))
 }

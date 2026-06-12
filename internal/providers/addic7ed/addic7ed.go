@@ -3,9 +3,12 @@ package addic7ed
 
 import (
 	"fmt"
+	"os"
 	"path"
 
+	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
+	"github.com/kakeetopius/subg/internal/util"
 	"github.com/matcornic/addic7ed"
 	"github.com/pterm/pterm"
 )
@@ -40,6 +43,7 @@ func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 	if opts.Language != "" {
 		show.Subtitles = show.Subtitles.Filter(addic7ed.WithLanguage(LanguageFullForm(opts.Language)))
 	}
+	opts.Query = show.Name
 
 	subtitles := make([]A7Subtitle, 0, len(show.Subtitles))
 
@@ -58,22 +62,47 @@ func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 	return subtitles, nil
 }
 
-func downloadSubtitle(sub *A7Subtitle, opts providers.Options) error {
+func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (err error) {
 	subtitle := addic7ed.Subtitle{
 		Language: opts.Language,
 		Version:  sub.Version,
 		Link:     sub.Link,
 	}
 
-	fileName := fmt.Sprintf("%v.%v", opts.OutPutFile, "srt")
-	outPath := path.Join(opts.OutPutDir, fileName)
+	if opts.OutPutFile == "" {
+		opts.OutPutFile = opts.Query
+	}
+
+	opts.OutPutFile = util.AddSubFileExtension(opts.OutPutFile, opts.SubtitleFormat)
+	outPath := path.Join(opts.OutPutDir, opts.OutPutFile)
+
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
 	if err != nil {
-		spinner.Fail()
+		return err
+	}
+	defer func() {
+		if err != nil {
+			spinner.Fail()
+		}
+	}()
+
+	subtitleStream, err := subtitle.Download()
+	if err != nil {
 		return err
 	}
 
-	err = subtitle.DownloadTo(outPath)
+	subFormatter, err := formats.NewSubFormat(formats.FormatTypeSRT, subtitleStream)
+	if err != nil {
+		return err
+	}
+
+	outFile, err := os.OpenFile(opts.OutPutFile, os.O_RDWR|os.O_CREATE, 0o644)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	err = subFormatter.ConvertToAndWrite(opts.SubtitleFormat, outFile)
 	if err != nil {
 		return err
 	}

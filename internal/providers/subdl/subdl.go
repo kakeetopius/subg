@@ -11,6 +11,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/kakeetopius/subg/internal/formats"
+	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
 )
 
@@ -117,10 +119,10 @@ func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
 
 	pterm.Info.Printf("Zip file downloaded successfully to: %v \n", zipOutfile)
 	pterm.Info.Printf("Extracting zip file...............\n")
-	return extractSubtitlesFromZip(zipBytesReader, opts.OutPutDir)
+	return extractSubtitlesFromZip(zipBytesReader, opts)
 }
 
-func extractSubtitlesFromZip(zipBytes *bytes.Reader, outDir string) error {
+func extractSubtitlesFromZip(zipBytes *bytes.Reader, opts options) error {
 	zipBytes.Seek(0, 0) // reset to start
 	zipper, err := zip.NewReader(zipBytes, zipBytes.Size())
 	if err != nil {
@@ -143,37 +145,52 @@ func extractSubtitlesFromZip(zipBytes *bytes.Reader, outDir string) error {
 		}
 	}
 
-	if len(srtFiles) == 0 {
-		// if no srt files found consider any file
-		srtFiles = allFiles
-	}
-
-	for _, f := range srtFiles {
-		err := func() error {
-			subtitleFile, err := f.Open()
-			if err != nil {
-				return err
-			}
-			defer subtitleFile.Close()
-
-			outFileName := path.Join(outDir, f.Name)
-			outFile, err := os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE, 0o644)
-			if err != nil {
-				return err
-			}
-			defer outFile.Close()
-
-			_, err = io.Copy(outFile, subtitleFile)
-			if err != nil {
-				return err
-			}
-			return nil
-		}()
+	for i, f := range srtFiles {
+		err = saveSubtitle(f, opts.OutPutDir, opts.OutPutFile, opts.SubtitleFormat, i)
 		if err != nil {
 			return err
 		}
 	}
 
-	pterm.Info.Printf("Extracted %v files to: %v\n", len(srtFiles), outDir)
+	return nil
+}
+
+func saveSubtitle(zf *zip.File, outdir string, outfile string, subFormat formats.FormatType, fileNum int) error {
+	subtitleFileFromZip, err := zf.Open()
+	if err != nil {
+		return err
+	}
+	defer subtitleFileFromZip.Close()
+
+	subFormatter, err := formats.NewSubFormat(formats.FormatTypeSRT, subtitleFileFromZip)
+	if err != nil {
+		return err
+	}
+
+	var outFileName string
+	if outfile != "" {
+		if fileNum != 0 {
+			outFileName = fmt.Sprintf("%v-%v", util.StripExtension(outfile), fileNum)
+		} else {
+			outFileName = outfile
+		}
+	} else {
+		outFileName = util.StripExtension(zf.Name)
+	}
+
+	outFileName = util.AddSubFileExtension(outFileName, subFormat)
+	outFileName = path.Join(outdir, outFileName)
+
+	outFile, err := os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE, 0o644)
+	if err != nil {
+		return err
+	}
+	defer outFile.Close()
+
+	err = subFormatter.ConvertToAndWrite(subFormat, outFile)
+	if err != nil {
+		return err
+	}
+	pterm.Info.Println("Subtitle saved at: ", outFileName)
 	return nil
 }

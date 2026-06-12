@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/kakeetopius/subg/internal/formats"
+	"github.com/kakeetopius/subg/internal/util"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +50,7 @@ Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 			}
 
 			if outFile == "" {
-				outFile = outFileFromInFile(inFile, formatType)
+				outFile = util.AddSubFileExtension(inFile, formatType)
 			}
 
 			outFile, err := os.OpenFile(outFile, os.O_RDWR|os.O_CREATE, 0o644)
@@ -59,7 +59,7 @@ Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 			}
 			defer outFile.Close()
 
-			err = formatter.ConvertTo(formatType, outFile)
+			err = formatter.ConvertToAndWrite(formatType, outFile)
 			if err != nil {
 				return err
 			}
@@ -76,10 +76,4 @@ Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 	convertCmd.Flags().StringVarP(&convertTo, "convert-to", "c", "", "The format to convert to (ignored if output file name is given)")
 
 	return &convertCmd
-}
-
-func outFileFromInFile(inFile string, outFileFormat formats.FormatType) string {
-	outfile := strings.TrimSuffix(inFile, filepath.Ext(inFile))
-
-	return fmt.Sprintf("%s.%s", outfile, outFileFormat)
 }

@@ -3,7 +3,9 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
+	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/providers/addic7ed"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
@@ -52,6 +54,24 @@ The following is the list of supported providers so far in order of priority.
 				}
 			}
 
+			var formatType formats.FormatType
+			if outputFile != "" {
+				outFileExt := filepath.Ext(outputFile)
+				fType, ferr := formats.SubFormatTypeFromString(outFileExt)
+				if ferr != nil {
+					return ferr
+				}
+				formatType = fType
+			} else if subtitleFormat != "" {
+				fType, ferr := formats.SubFormatTypeFromString(subtitleFormat)
+				if ferr != nil {
+					return ferr
+				}
+				formatType = fType
+			} else {
+				return fmt.Errorf("could not determine which format to download.\nprovide either an output file name or use the --format flag.")
+			}
+
 			providerSet := providers.NewProviderSet(args)
 			providerSet.WithOptions(providers.Options{
 				IMDBId:         imdbID,
@@ -59,7 +79,7 @@ The following is the list of supported providers so far in order of priority.
 				Episode:        episode,
 				Language:       subtitleLang,
 				Year:           releaseYear,
-				SubtitleFormat: subtitleFormat,
+				SubtitleFormat: formatType,
 				OutPutFile:     outputFile,
 				OutPutDir:      outputDir,
 				IsMovie:        isMovie,

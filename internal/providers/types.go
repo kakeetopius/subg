@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/ui"
 	"github.com/pterm/pterm"
 )
@@ -54,7 +55,7 @@ type Options struct {
 	IsSerie  bool
 
 	// Download Options
-	SubtitleFormat string
+	SubtitleFormat formats.FormatType
 	OutPutFile     string
 	OutPutDir      string
 	AutoSelect     bool

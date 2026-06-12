@@ -64,8 +64,8 @@ func (s *SubFormat) Type() FormatType {
 	return s.formatType
 }
 
-func (s *SubFormat) ConvertTo(fType FormatType, out io.Writer) error {
-	s.formatType = fType
+func (s *SubFormat) ConvertToAndWrite(newFormatType FormatType, out io.Writer) error {
+	s.formatType = newFormatType
 	return s.Write(out)
 }
 
