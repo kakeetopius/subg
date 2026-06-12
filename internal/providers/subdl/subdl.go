@@ -74,10 +74,7 @@ func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
 	url := SUBDLDOWNLOADURL + subtitle.URL
 
 	tmpDir := os.TempDir()
-	zipOutfile := opts.OutPutFile
-	if zipOutfile == "" {
-		zipOutfile = fmt.Sprintf("%v.%v", subtitle.ReleaseName, "zip")
-	}
+	zipOutfile := fmt.Sprintf("%v.%v", subtitle.ReleaseName, "zip")
 
 	zipOutfile = path.Join(tmpDir, zipOutfile)
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")

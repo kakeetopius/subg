@@ -43,7 +43,6 @@ func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 	if opts.Language != "" {
 		show.Subtitles = show.Subtitles.Filter(addic7ed.WithLanguage(LanguageFullForm(opts.Language)))
 	}
-	opts.Query = show.Name
 
 	subtitles := make([]A7Subtitle, 0, len(show.Subtitles))
 
