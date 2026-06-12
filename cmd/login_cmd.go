@@ -21,7 +21,7 @@ func LoginCmd() *cobra.Command {
 Note that only opensubtitles (code: os) requires authentication at the moment`,
 		Aliases: []string{"l"},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			providersToUse := appConfig.GetStringSlice("providers")
+			providersToUse := appConfig.GetStringSlice("login.providers")
 			if len(providersToUse) == 0 {
 				return fmt.Errorf("please specify provider to authenticate to. Use subg login --help for more information")
 			}
@@ -61,6 +61,6 @@ Note that only opensubtitles (code: os) requires authentication at the moment`,
 	appConfig.BindPFlag("opensubtitles.password", passwordPflag)
 
 	loginCmd.Flags().StringSliceVarP(&providersGiven, "providers", "p", nil, "The provider(s) to use.")
-	appConfig.BindPFlag("providers", loginCmd.Flags().Lookup("providers"))
+	appConfig.BindPFlag("login.providers", loginCmd.Flags().Lookup("providers"))
 	return &loginCmd
 }

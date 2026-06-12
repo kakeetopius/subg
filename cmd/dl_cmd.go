@@ -69,7 +69,7 @@ The following is the list of supported providers so far in order of priority.
 				}
 				formatType = fType
 			} else {
-				return fmt.Errorf("could not determine which format to download.\nprovide either an output file name or use the --format flag.")
+				return fmt.Errorf("could not determine which format to download.\nprovide either an output file name or use the --format flag")
 			}
 
 			providerSet := providers.NewProviderSet(args)
