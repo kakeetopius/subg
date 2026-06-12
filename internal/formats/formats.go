@@ -3,6 +3,7 @@ package formats
 
 import (
 	"fmt"
+	"strings"
 )
 
 type FormatType int
@@ -36,6 +37,10 @@ func (t FormatType) String() string {
 }
 
 func SubFormatTypeFromString(s string) (FormatType, error) {
+	if !strings.HasPrefix(s, ".") {
+		s = fmt.Sprintf(".%v", s)
+	}
+
 	switch s {
 	case ".srt":
 		return FormatTypeSRT, nil

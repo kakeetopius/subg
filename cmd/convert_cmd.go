@@ -18,8 +18,11 @@ func ConvertCmd() *cobra.Command {
 	)
 
 	convertCmd := cobra.Command{
-		Use:     "convert",
-		Short:   "Convert subtitle from one format to another",
+		Use:   "convert",
+		Short: "Convert subtitle from one format to another",
+		Long: `Convert subtitle from one format to another.
+
+Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 		Aliases: []string{"c"},
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
@@ -37,9 +40,6 @@ func ConvertCmd() *cobra.Command {
 				}
 				formatType = fType
 			} else if convertTo != "" {
-				if !strings.HasPrefix(convertTo, ".") {
-					convertTo = fmt.Sprintf(".%v", convertTo)
-				}
 				fType, ferr := formats.SubFormatTypeFromString(convertTo)
 				if ferr != nil {
 					return ferr
@@ -73,7 +73,7 @@ func ConvertCmd() *cobra.Command {
 	convertCmd.MarkFlagFilename("in", "srt", "vtt", "ass", "ssa", "ttml", "stl")
 
 	convertCmd.Flags().StringVarP(&outFile, "out", "o", "", "The output file name.")
-	convertCmd.Flags().StringVarP(&convertTo, "convert-to", "c", "", "The format to convert to.")
+	convertCmd.Flags().StringVarP(&convertTo, "convert-to", "c", "", "The format to convert to (ignored if output file name is given)")
 
 	return &convertCmd
 }
