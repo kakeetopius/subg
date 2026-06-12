@@ -7,6 +7,7 @@ require (
 	charm.land/bubbletea/v2 v2.0.6
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/angelospk/opensubtitles-go v0.5.0
+	github.com/asticode/go-astisub v0.40.0
 	github.com/google/go-querystring v1.2.0
 	github.com/matcornic/addic7ed v0.2.1
 	github.com/pterm/pterm v0.12.83
@@ -20,6 +21,8 @@ require (
 	atomicgo.dev/schedule v0.1.0 // indirect
 	github.com/PuerkitoBio/goquery v1.10.2 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/asticode/go-astikit v0.20.0 // indirect
+	github.com/asticode/go-astits v1.8.0 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
 	github.com/charmbracelet/ultraviolet v0.0.0-20260416155717-489999b90468 // indirect
 	github.com/charmbracelet/x/ansi v0.11.7 // indirect
