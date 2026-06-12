@@ -89,7 +89,7 @@ func transcribeFile(opts *TransciberOptions) error {
 		"--output_format", "srt",
 	}
 
-	if opts.Language == "" {
+	if opts.Language != "" {
 		flags = append(flags, "--language", opts.Language)
 	}
 
