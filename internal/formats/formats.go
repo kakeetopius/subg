@@ -2,8 +2,11 @@
 package formats
 
 import (
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/kakeetopius/subg/internal/util"
 )
 
 type FormatType int
@@ -15,6 +18,11 @@ const (
 	FormatTypeSSA
 	FormatTypeVTT
 	FormatTypeASS
+)
+
+var (
+	ErrCouldNotDetermineFormat = errors.New("could not determine format to use")
+	ErrFormatMismatch          = errors.New("format mismatch between the output file extension and the format given. use one or the other")
 )
 
 func (t FormatType) String() string {
@@ -36,7 +44,10 @@ func (t FormatType) String() string {
 	return "unknown"
 }
 
-func SubFormatTypeFromString(s string) (FormatType, error) {
+func SubFormatFromString(s string) (FormatType, error) {
+	if s == "" {
+		return 0, ErrCouldNotDetermineFormat
+	}
 	if !strings.HasPrefix(s, ".") {
 		s = fmt.Sprintf(".%v", s)
 	}
@@ -57,4 +68,44 @@ func SubFormatTypeFromString(s string) (FormatType, error) {
 	}
 
 	return 0, fmt.Errorf("unsupported format: %v", s)
+}
+
+func SubFormatFromFileNameOrFormatString(fileName string, format string) (FormatType, error) {
+	var outFileFormat FormatType
+	if fileName != "" {
+		outFileExt := util.ExtensionOf(fileName)
+		fType, err := SubFormatFromString(outFileExt)
+		if err != nil {
+			return 0, err
+		}
+		outFileFormat = fType
+	}
+
+	var convertToFormat FormatType
+	if format != "" {
+		fType, err := SubFormatFromString(format)
+		if err != nil {
+			return 0, err
+		}
+		convertToFormat = fType
+	}
+
+	if fileName != "" && format != "" && convertToFormat != outFileFormat {
+		return 0, ErrFormatMismatch
+	}
+
+	var formatType FormatType
+	if fileName != "" {
+		formatType = outFileFormat
+	} else if format != "" {
+		formatType = convertToFormat
+	} else {
+		return 0, ErrCouldNotDetermineFormat
+	}
+
+	return formatType, nil
+}
+
+func AddExtensionToSubFile(file string, fileFormat FormatType) string {
+	return fmt.Sprintf("%s.%s", file, fileFormat)
 }

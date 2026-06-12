@@ -22,7 +22,7 @@ func GenCmd() *cobra.Command {
 		Aliases: []string{"g", "gen"},
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			subFormat, err := formats.SubFormatTypeFromString(subtitleFormat)
+			subFormat, err := formats.SubFormatFromString(subtitleFormat)
 			if err != nil {
 				return err
 			}

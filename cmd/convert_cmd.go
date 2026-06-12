@@ -31,16 +31,17 @@ Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 				return err
 			}
 
-			formatType, err := util.SubFormatFromFileNameOrFormatString(outFile, convertTo)
+			formatType, err := formats.SubFormatFromFileNameOrFormatString(outFile, convertTo)
 			if err != nil {
-				if errors.Is(err, util.ErrCouldNotDetermineFormat) {
+				if errors.Is(err, formats.ErrCouldNotDetermineFormat) {
 					return fmt.Errorf("could not determine which format to convert to. use either the --convert-to flag or give an output file with the correct extension")
 				}
 				return err
 			}
 
 			if outFile == "" {
-				outFile = util.AddSubFileExtension(inFile, formatType)
+				outFile = util.StripExtension(inFile)
+				outFile = formats.AddExtensionToSubFile(outFile, formatType)
 			}
 
 			outFile, err := os.OpenFile(outFile, os.O_RDWR|os.O_CREATE, 0o644)

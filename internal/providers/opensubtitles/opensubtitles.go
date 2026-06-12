@@ -52,7 +52,7 @@ type SubtitleFile struct {
 	FileName string
 }
 
-func Login(opts LoginOptions) error {
+func Login(opts LoginOptions) (err error) {
 	if opts.UserName == "" {
 		return fmt.Errorf("username cannot be empty")
 	} else if opts.Password == "" {
@@ -74,30 +74,33 @@ func Login(opts LoginOptions) error {
 	if err != nil {
 		return err
 	}
+
+	defer func() {
+		if err != nil {
+			spinner.Fail()
+		}
+	}()
+
 	loginParams := opensubtitles.LoginRequest{
 		Username: opts.UserName,
 		Password: opts.Password,
 	}
 	resp, err := client.Login(context.Background(), loginParams)
 	if err != nil {
-		spinner.Fail()
 		return err
 	}
 	cacheFile, err := util.CreateFileIfNotExists(authFile)
 	if err != nil {
-		spinner.Fail()
 		return err
 	}
 	defer cacheFile.Close()
 
 	jsonResponse, err := json.MarshalIndent(resp, "", "  ")
 	if err != nil {
-		spinner.Fail()
 		return err
 	}
 	_, err = cacheFile.Write(jsonResponse)
 	if err != nil {
-		spinner.Fail()
 		return err
 	}
 	spinner.Success("Logged in Successfully")
@@ -230,8 +233,15 @@ func downloadSubtitle(opts options, subtitle *OSSubtitle) (err error) {
 	if opts.OutPutFile == "" {
 		opts.OutPutFile = file2Download.FileName
 	}
+	if opts.OutPutDir != "" {
+		err = util.CreateDirIfNotExists(opts.OutPutDir)
+		if err != nil {
+			return err
+		}
+	}
 
-	opts.OutPutFile = util.AddSubFileExtension(opts.OutPutFile, opts.SubtitleFormat)
+	opts.OutPutFile = util.StripExtension(opts.OutPutFile)
+	opts.OutPutFile = formats.AddExtensionToSubFile(opts.OutPutFile, opts.SubtitleFormat)
 	opts.OutPutFile = path.Join(opts.OutPutDir, opts.OutPutFile)
 
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")

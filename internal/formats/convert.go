@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
-	"strings"
 
 	"github.com/asticode/go-astisub"
+	"github.com/kakeetopius/subg/internal/util"
 )
 
 type SubFormat struct {
@@ -44,11 +43,11 @@ func NewSubFormat(subtitleType FormatType, r io.Reader) (SubFormat, error) {
 }
 
 func NewSubFormatFromFile(fileName string) (SubFormat, error) {
-	fileExt := filepath.Ext(fileName)
+	fileExt := util.ExtensionOf(fileName)
 	if fileExt == "" {
 		return SubFormat{}, fmt.Errorf("could not determine subtitle format of file: %s", fileName)
 	}
-	formatType, err := SubFormatTypeFromString(strings.ToLower(filepath.Ext(fileName)))
+	formatType, err := SubFormatFromString(util.ExtensionOf(fileName))
 	if err != nil {
 		return SubFormat{}, err
 	}

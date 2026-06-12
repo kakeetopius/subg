@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 
 	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/util"
@@ -78,19 +80,16 @@ func Transcribe(opts TransciberOptions) error {
 func transcribeFile(opts *TransciberOptions) error {
 	pterm.Info.Println("Transcribing Audio. This might take a while if the model is not yet offline.....")
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-
 	flags := []string{
 		"--model", defaultVal(opts.Model, defaultModelName),
-		"--output_dir", defaultVal(opts.OutPutDir, cwd),
 		"--output_format", "srt",
 	}
 
 	if opts.Language != "" {
 		flags = append(flags, "--language", opts.Language)
+	}
+	if opts.OutPutDir != "" {
+		flags = append(flags, "--output_dir", opts.OutPutDir)
 	}
 
 	args := buildArgs(opts.InputFiles, flags)
@@ -101,19 +100,17 @@ func transcribeFile(opts *TransciberOptions) error {
 func translateFiles(opts *TransciberOptions) error {
 	pterm.Info.Println("Translating Audio......")
 
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
 	flags := []string{
 		"--model", defaultVal(opts.Model, defaultModelName),
 		"--task", "translate",
-		"--output_dir", defaultVal(opts.OutPutDir, cwd),
 		"--output_format", "srt",
 	}
 
 	if opts.Language != "" {
 		flags = append(flags, "--language", opts.Language)
+	}
+	if opts.OutPutDir != "" {
+		flags = append(flags, "--output_dir", opts.OutPutDir)
 	}
 
 	args := buildArgs(opts.InputFiles, flags)
@@ -123,8 +120,16 @@ func translateFiles(opts *TransciberOptions) error {
 
 func runTranscriber(opts *TransciberOptions, args []string) error {
 	transcriber := filepath.Join(opts.CacheDir, transcriberEnvDir, "bin", transcriberName)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		awaitSignal()
+		cancel()
+	}()
+
 	cmd := exec.CommandContext(
-		context.Background(),
+		ctx,
 		transcriber,
 		args...,
 	)
@@ -136,27 +141,29 @@ func runTranscriber(opts *TransciberOptions, args []string) error {
 		return err
 	}
 
-	if opts.SubtitleFormat != formats.FormatTypeSRT {
-		return convertFilesToGivenFormat(opts)
-	}
-	return nil
+	return convertFilesToGivenFormatAndSave(opts)
 }
 
-func convertFilesToGivenFormat(opts *TransciberOptions) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
+func convertFilesToGivenFormatAndSave(opts *TransciberOptions) error {
+	var err error
+	if opts.OutPutDir != "" {
+		err = util.CreateDirIfNotExists(opts.OutPutDir)
+		if err != nil {
+			return err
+		}
 	}
-	outDir := defaultVal(opts.OutPutDir, cwd)
+	outDir := opts.OutPutDir
 
 	for _, file := range opts.InputFiles {
-		file = util.StripExtension(file)
+		// generated file in srt format
+		inFile := util.StripExtension(file)
+		inFile = formats.AddExtensionToSubFile(inFile, formats.FormatTypeSRT)
+		inFile = filepath.Join(outDir, inFile)
 
-		inFile := filepath.Join(outDir, file)
-		outFile := filepath.Join(outDir, file)
-
-		inFile = util.AddSubFileExtension(inFile, formats.FormatTypeSRT)
-		outFile = util.AddSubFileExtension(outFile, opts.SubtitleFormat)
+		// final file with correct format
+		outFile := util.StripExtension(file)
+		outFile = formats.AddExtensionToSubFile(outFile, opts.SubtitleFormat)
+		outFile = filepath.Join(outDir, outFile)
 
 		err := convertFile(inFile, outFile, opts.SubtitleFormat)
 		if err != nil {
@@ -200,9 +207,17 @@ func initTranscirberPyEnv(cacheDir string, verbose bool) error {
 		return nil
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		awaitSignal()
+		cancel()
+	}()
+
 	pterm.Info.Println("Setting up transcriber Environment.")
 	cmd := exec.CommandContext(
-		context.Background(),
+		ctx,
 		"python", "-m", "venv", transcriberEnvPath,
 	)
 
@@ -216,12 +231,20 @@ func installTranscriber(cacheDir string, verbose bool) error {
 		return nil
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	go func() {
+		awaitSignal()
+		cancel()
+	}()
+
 	pterm.Info.Println("Installing the transcriber......")
 
 	pip := filepath.Join(cacheDir, transcriberEnvDir, "bin", "pip")
 
 	cmd := exec.CommandContext(
-		context.Background(),
+		ctx,
 		pip, "install", transcriberName,
 	)
 
@@ -297,4 +320,12 @@ func checkForBinaryDependencies() error {
 	}
 
 	return nil
+}
+
+func awaitSignal() {
+	signalChan := make(chan os.Signal, 1)
+
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGQUIT)
+
+	<-signalChan
 }

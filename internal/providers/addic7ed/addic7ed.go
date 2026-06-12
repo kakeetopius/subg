@@ -71,8 +71,15 @@ func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (err error) {
 	if opts.OutPutFile == "" {
 		opts.OutPutFile = opts.Query
 	}
+	if opts.OutPutDir != "" {
+		err = util.CreateDirIfNotExists(opts.OutPutDir)
+		if err != nil {
+			return err
+		}
+	}
 
-	opts.OutPutFile = util.AddSubFileExtension(opts.OutPutFile, opts.SubtitleFormat)
+	opts.OutPutFile = util.StripExtension(opts.OutPutFile)
+	opts.OutPutFile = formats.AddExtensionToSubFile(opts.OutPutFile, opts.SubtitleFormat)
 	outPath := path.Join(opts.OutPutDir, opts.OutPutFile)
 
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")

@@ -73,6 +73,13 @@ func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
 	}
 	url := SUBDLDOWNLOADURL + subtitle.URL
 
+	if opts.OutPutDir != "" {
+		err = util.CreateDirIfNotExists(opts.OutPutDir)
+		if err != nil {
+			return err
+		}
+	}
+
 	tmpDir := os.TempDir()
 	zipOutfile := fmt.Sprintf("%v.%v", subtitle.ReleaseName, "zip")
 
@@ -167,13 +174,13 @@ func saveSubtitle(zf *zip.File, outdir string, outfile string, subFormat formats
 		if fileNum != 0 {
 			outFileName = fmt.Sprintf("%v-%v", util.StripExtension(outfile), fileNum)
 		} else {
-			outFileName = outfile
+			outFileName = util.StripExtension(outfile)
 		}
 	} else {
 		outFileName = util.StripExtension(zf.Name)
 	}
 
-	outFileName = util.AddSubFileExtension(outFileName, subFormat)
+	outFileName = formats.AddExtensionToSubFile(outFileName, subFormat)
 	outFileName = path.Join(outdir, outFileName)
 
 	outFile, err := os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE, 0o644)
