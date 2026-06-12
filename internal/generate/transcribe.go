@@ -43,10 +43,9 @@ func Transcribe(opts TransciberOptions) error {
 		return err
 	}
 
-	for _, file := range opts.InputFiles {
-		if !util.FileExists(file) {
-			return fmt.Errorf(" The file \"%s\" does not exist", file)
-		}
+	err = validateInputFiles(opts.InputFiles)
+	if err != nil {
+		return err
 	}
 
 	if opts.HFToken == "" {
@@ -63,10 +62,14 @@ func Transcribe(opts TransciberOptions) error {
 		return err
 	}
 
+	if opts.Verbose {
+		pterm.Info.Printf("Using model: %s\n", opts.Model)
+	}
+
 	if opts.Translate {
-		err = translateFiles(opts)
+		err = translateFiles(&opts)
 	} else {
-		err = transcribeFile(opts)
+		err = transcribeFile(&opts)
 	}
 	if err != nil {
 		return err
@@ -74,8 +77,7 @@ func Transcribe(opts TransciberOptions) error {
 	return nil
 }
 
-func transcribeFile(opts TransciberOptions) error {
-	transcriber := filepath.Join(opts.CacheDir, transcriberEnvDir, "bin", transcriberName)
+func transcribeFile(opts *TransciberOptions) error {
 	pterm.Info.Println("Transcribing Audio. This might take a while if the model is not yet offline.....")
 
 	cwd, err := os.Getwd()
@@ -90,33 +92,10 @@ func transcribeFile(opts TransciberOptions) error {
 		"--output_format", "srt",
 	})
 
-	cmd := exec.CommandContext(
-		context.Background(),
-		transcriber,
-		args...,
-	)
-
-	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", "HF_TOKEN", opts.HFToken))
-
-	if opts.Verbose {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-	}
-
-	err = cmd.Run()
-	if err != nil {
-		return err
-	}
-
-	if opts.SubtitleFormat != formats.FormatTypeSRT {
-		return convertFilesToGivenFormat(opts)
-	}
-
-	return nil
+	return runTranscriber(opts, args)
 }
 
-func translateFiles(opts TransciberOptions) error {
-	transcriber := filepath.Join(opts.CacheDir, transcriberEnvDir, "bin", transcriberName)
+func translateFiles(opts *TransciberOptions) error {
 	pterm.Info.Println("Translating Audio......")
 
 	cwd, err := os.Getwd()
@@ -132,6 +111,11 @@ func translateFiles(opts TransciberOptions) error {
 		"--output_format", "srt",
 	})
 
+	return runTranscriber(opts, args)
+}
+
+func runTranscriber(opts *TransciberOptions, args []string) error {
+	transcriber := filepath.Join(opts.CacheDir, transcriberEnvDir, "bin", transcriberName)
 	cmd := exec.CommandContext(
 		context.Background(),
 		transcriber,
@@ -145,7 +129,7 @@ func translateFiles(opts TransciberOptions) error {
 		cmd.Stderr = os.Stderr
 	}
 
-	err = cmd.Run()
+	err := cmd.Run()
 	if err != nil {
 		return err
 	}
@@ -154,6 +138,57 @@ func translateFiles(opts TransciberOptions) error {
 	}
 
 	return nil
+}
+
+func convertFilesToGivenFormat(opts *TransciberOptions) error {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	outDir := defaultVal(opts.OutPutDir, cwd)
+
+	for _, file := range opts.InputFiles {
+		file = util.StripExtension(file)
+
+		inFile := filepath.Join(outDir, file)
+		outFile := filepath.Join(outDir, file)
+
+		inFile = util.AddSubFileExtension(inFile, formats.FormatTypeSRT)
+		outFile = util.AddSubFileExtension(outFile, opts.SubtitleFormat)
+
+		err := convertFile(inFile, outFile, opts.SubtitleFormat)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func convertFile(infile string, outfile string, subFormat formats.FormatType) error {
+	f, e := os.Open(infile)
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+
+	subFormatter, err := formats.NewSubFormat(formats.FormatTypeSRT, f)
+	if err != nil {
+		return err
+	}
+
+	out, err := os.OpenFile(outfile, os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	err = subFormatter.ConvertToAndWrite(subFormat, out)
+	if err != nil {
+		return err
+	}
+
+	return os.Remove(infile)
 }
 
 func initTranscirberPyEnv(cacheDir string, verbose bool) error {
@@ -223,47 +258,10 @@ func buildArgs(sets ...[]string) []string {
 	return completeArgs
 }
 
-func convertFilesToGivenFormat(opts TransciberOptions) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	outDir := defaultVal(opts.OutPutDir, cwd)
-
-	for _, file := range opts.InputFiles {
-		file = util.StripExtension(file)
-		inFile := filepath.Join(outDir, file)
-		outFile := filepath.Join(outDir, file)
-
-		err := func() error {
-			f, e := os.Open(fmt.Sprintf("%v.%v", inFile, "srt"))
-			if e != nil {
-				return e
-			}
-			defer f.Close()
-
-			subFormatter, err := formats.NewSubFormat(formats.FormatTypeSRT, f)
-			if err != nil {
-				return err
-			}
-
-			outFile = util.AddSubFileExtension(outFile, opts.SubtitleFormat)
-
-			out, err := os.OpenFile(outFile, os.O_CREATE|os.O_RDWR, 0o644)
-			if err != nil {
-				return err
-			}
-			defer out.Close()
-
-			err = subFormatter.ConvertToAndWrite(opts.SubtitleFormat, out)
-			if err != nil {
-				return err
-			}
-
-			return os.Remove(inFile)
-		}()
-		if err != nil {
-			return err
+func validateInputFiles(inFiles []string) error {
+	for _, file := range inFiles {
+		if !util.FileExists(file) {
+			return fmt.Errorf(" The file \"%s\" does not exist", file)
 		}
 	}
 

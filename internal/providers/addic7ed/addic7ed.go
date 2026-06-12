@@ -89,6 +89,7 @@ func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (err error) {
 	if err != nil {
 		return err
 	}
+	defer subtitleStream.Close()
 
 	subFormatter, err := formats.NewSubFormat(formats.FormatTypeSRT, subtitleStream)
 	if err != nil {

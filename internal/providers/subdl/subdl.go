@@ -110,7 +110,6 @@ func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
 	zipBytesReader := bytes.NewReader(zipBytes)
 	_, err = io.Copy(outFile, zipBytesReader)
 	if err != nil {
-		spinner.Fail()
 		return err
 	}
 

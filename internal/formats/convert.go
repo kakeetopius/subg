@@ -57,6 +57,7 @@ func NewSubFormatFromFile(fileName string) (SubFormat, error) {
 	if err != nil {
 		return SubFormat{}, err
 	}
+	defer file.Close()
 	return NewSubFormat(formatType, file)
 }
 
