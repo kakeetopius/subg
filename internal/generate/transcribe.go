@@ -175,6 +175,10 @@ func convertFilesToGivenFormatAndSave(opts *TransciberOptions) error {
 }
 
 func convertFile(infile string, outfile string, subFormat formats.FormatType) error {
+	if subFormat == formats.FormatTypeSRT {
+		// if it is an srt file no need to convert
+		return nil
+	}
 	f, e := os.Open(infile)
 	if e != nil {
 		return e
