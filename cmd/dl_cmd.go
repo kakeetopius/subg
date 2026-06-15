@@ -8,6 +8,7 @@ import (
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/providers/addic7ed"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
+	opensubtitlesorg "github.com/kakeetopius/subg/internal/providers/opensubtitles_org"
 	"github.com/kakeetopius/subg/internal/providers/subdl"
 	"github.com/spf13/cobra"
 )
@@ -43,6 +44,9 @@ The following is the list of supported providers so far in order of priority.
 		Aliases: []string{"dl", "d"},
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			return opensubtitlesorg.Search(opensubtitlesorg.Options{
+				CacheDir: appConfig.GetString("cache_dir"),
+			})
 			providersToUse := appConfig.GetStringSlice("providers")
 
 			formatType, err := formats.SubFormatFromFileNameOrFormatString(outputFile, subtitleFormat)
