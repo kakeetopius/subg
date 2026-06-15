@@ -44,9 +44,6 @@ The following is the list of supported providers so far in order of priority.
 		Aliases: []string{"dl", "d"},
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			return opensubtitlesorg.Search(opensubtitlesorg.Options{
-				CacheDir: appConfig.GetString("cache_dir"),
-			})
 			providersToUse := appConfig.GetStringSlice("providers")
 
 			formatType, err := formats.SubFormatFromFileNameOrFormatString(outputFile, subtitleFormat)
@@ -117,12 +114,16 @@ The following is the list of supported providers so far in order of priority.
 }
 
 func addAllProvidersToSet(providerSet *providers.ProviderSet) {
-	providerSet.WithProvider(&opensubtitles.OpenSubtitles{}, opensubtitles.OSOptions{
-		APIKey:   appConfig.GetString("opensubtitles.api_key"),
+	// providerSet.WithProvider(&opensubtitles.OpenSubtitles{}, opensubtitles.OSOptions{
+	// 	APIKey:   appConfig.GetString("opensubtitles.api_key"),
+	// 	CacheDir: appConfig.GetString("cache_dir"),
+	// }).
+	// 	WithProvider(&subdl.SubDL{}, subdl.SubDLOpts{
+	// 		APIKey: appConfig.GetString("subdl.api_key"),
+	// 	}).
+	// 	WithProvider(&addic7ed.Addic7ed{})
+
+	providerSet.WithProvider(&opensubtitlesorg.OpenSubtitlesOrg{}, opensubtitlesorg.OSOptions{
 		CacheDir: appConfig.GetString("cache_dir"),
-	}).
-		WithProvider(&subdl.SubDL{}, subdl.SubDLOpts{
-			APIKey: appConfig.GetString("subdl.api_key"),
-		}).
-		WithProvider(&addic7ed.Addic7ed{})
+	})
 }
