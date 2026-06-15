@@ -11,8 +11,6 @@ var ErrDomainSessionNotFound = errors.New("session for domain not found")
 type Session struct {
 	Domain         string `json:"domain"`
 	CookieHeader   string `json:"cookie_header"`
-	CfClearance    string `json:"cf_clearance"`
-	AnubisAuth     string `json:"anubis_auth"`
 	UserAgent      string `json:"user_agent"`
 	AcquiredAtUnix int64  `json:"acquired_at_unix"`
 }

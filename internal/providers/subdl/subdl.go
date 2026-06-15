@@ -113,6 +113,7 @@ func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
 	if err != nil {
 		return err
 	}
+	fmt.Println("Response.....\n", string(zipBytes))
 
 	zipBytesReader := bytes.NewReader(zipBytes)
 	_, err = io.Copy(outFile, zipBytesReader)

@@ -32,8 +32,7 @@ func NewClient(c Config) (*Client, error) {
 		baseURL: SUBDLAPIURL,
 	}
 
-	httpClient := httpclient.New(SUBDLAPIURL)
-	httpClient.SetAPIKey(&c.APIKey)
+	httpClient := httpclient.New().WithBaseURL(SUBDLAPIURL).WithAPIKey(c.APIKey)
 
 	client.httpClient = httpClient
 	return &client, nil
@@ -42,7 +41,7 @@ func NewClient(c Config) (*Client, error) {
 func (c *Client) SearchSubtitles(ctx context.Context, params SearchParams) (*SearchResults, error) {
 	var response SearchResults
 
-	err := c.httpClient.Get(ctx, "/subtitles", params, &response)
+	err := c.httpClient.GetJSON(ctx, "/subtitles", params, &response)
 	if err != nil {
 		return nil, err
 	}
