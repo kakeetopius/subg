@@ -57,7 +57,6 @@ func (p *OpenSubtitlesOrg) search(opts Options) ([]OSOrgSubtitle, error) {
 	if title == "" {
 		return nil, nil
 	}
-	fmt.Println("Title: ", title)
 
 	subs := getSubtitleResults(doc)
 

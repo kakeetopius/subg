@@ -81,15 +81,20 @@ func (p *SubDL) DisplaySelections() ([]providers.Subtitle, error) {
 		return nil, fmt.Errorf("no subtitles returned by subdl")
 	}
 
+	maxNameWidth := 70
 	columns := []table.Column{
 		{Title: "ID", Width: 5},
-		{Title: "Name", Width: 70},
+		{Title: "Name", Width: maxNameWidth},
 		{Title: "Lang", Width: 10},
 		{Title: "Author", Width: 15},
 	}
 
 	rows := []table.Row{}
+	maxNameLen := 0
 	for _, sub := range p.subtitles {
+		if len(sub.ReleaseName) > maxNameLen {
+			maxNameLen = len(sub.ReleaseName)
+		}
 		rows = append(rows, []string{
 			fmt.Sprint(sub.ID),
 			sub.ReleaseName,
@@ -98,6 +103,9 @@ func (p *SubDL) DisplaySelections() ([]providers.Subtitle, error) {
 		})
 	}
 
+	if maxNameLen < maxNameWidth {
+		columns[1].Width = maxNameLen
+	}
 	subID, err := ui.DisplayTableAndGetSubtitleID(rows, columns)
 	if err != nil {
 		return nil, err

@@ -26,10 +26,10 @@ type OSOrgSubtitle struct {
 }
 type Options struct {
 	providers.Options
-	OSOptions
+	OSOrgOptions
 }
 
-type OSOptions struct {
+type OSOrgOptions struct {
 	CacheDir string
 }
 
@@ -48,8 +48,8 @@ func (p *OpenSubtitlesOrg) WithOptions(opts providers.Options) {
 }
 
 func (p *OpenSubtitlesOrg) WithSpecificOptions(opts any) {
-	if options, ok := opts.(OSOptions); ok {
-		p.opts.OSOptions = options
+	if options, ok := opts.(OSOrgOptions); ok {
+		p.opts.OSOrgOptions = options
 	}
 }
 

@@ -62,7 +62,7 @@ func (p *Addic7ed) DisplaySelections() ([]providers.Subtitle, error) {
 
 	columns := []table.Column{
 		{Title: "ID", Width: 5},
-		{Title: "Name", Width: 70},
+		{Title: "Name", Width: len(p.opts.Query)},
 		{Title: "Lang", Width: 10},
 		{Title: "Version", Width: 10},
 	}

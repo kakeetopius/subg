@@ -82,16 +82,21 @@ func (p *OpenSubtitles) DisplaySelections() ([]providers.Subtitle, error) {
 	if len(p.subtitles) < 1 {
 		return nil, fmt.Errorf("opensubtitles did not return any results")
 	}
+	maxNameWidth := 72
 	columns := []table.Column{
 		{Title: "ID", Width: 8},
-		{Title: "Name", Width: 72},
+		{Title: "Name", Width: maxNameWidth},
 		{Title: "Lang", Width: 10},
 		{Title: "Rating", Width: 10},
 		{Title: "Votes", Width: 10},
 	}
 
 	rows := []table.Row{}
+	maxNameLen := 0
 	for _, subtitle := range p.subtitles {
+		if len(subtitle.Release) > maxNameLen {
+			maxNameLen = len(subtitle.Release)
+		}
 		rows = append(rows, []string{
 			subtitle.SubtitleID,
 			subtitle.Release,
@@ -101,6 +106,9 @@ func (p *OpenSubtitles) DisplaySelections() ([]providers.Subtitle, error) {
 		})
 	}
 
+	if maxNameLen < maxNameWidth {
+		columns[1].Width = maxNameLen
+	}
 	subID, err := ui.DisplayTableAndGetSubtitleID(rows, columns)
 	if err != nil {
 		return nil, err
