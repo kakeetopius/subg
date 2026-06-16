@@ -14,7 +14,7 @@ type Session struct {
 	UserAgent      string `json:"user_agent"`
 	AcquiredAtUnix int64  `json:"acquired_at_unix"`
 
-	client *httpclient.Client
+	Client *httpclient.Client `json:"-"`
 }
 
 func (s Session) isExpired(sessionTTL time.Duration) bool {
@@ -26,9 +26,13 @@ func (s Session) isUsable() bool {
 }
 
 func (s *Session) initSessionHTTPClient(baseURL string) {
-	s.client = httpclient.New().WithBaseURL(baseURL).WithUserAgent(s.UserAgent).WithCookie(s.CookieHeader)
+	s.Client = httpclient.New().WithBaseURL(baseURL).WithUserAgent(s.UserAgent).WithCookie(s.CookieHeader)
 }
 
 func (s Session) DoRequest(path string) (*http.Response, error) {
-	return s.client.Get(context.Background(), path, nil)
+	return s.Client.Get(context.Background(), path, nil)
+}
+
+func (s Session) DoRequestWithBrowser(path string) (*http.Response, error) {
+	return s.Client.Get(context.Background(), path, nil)
 }

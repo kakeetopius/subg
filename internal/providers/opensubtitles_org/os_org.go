@@ -3,6 +3,8 @@ package opensubtitlesorg
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 	"time"
 
@@ -11,14 +13,20 @@ import (
 )
 
 const (
-	domain               = "www.opensubtitles.org"
+	domain            = "www.opensubtitles.org"
+	downloadSubDomain = "dl.opensubtitles.org"
+
 	openSubtitlesBaseURL = "https://" + domain
-	searchURL            = "/en/search"
-	anubisCookieName     = "techaro.lol-anubis-auth"
-	sessionTTL           = 5 * time.Hour
+	opensubtitlesDLURL   = "https://" + downloadSubDomain
+
+	searchPath = "/en/search"
+	dlPath     = "/en/download/sub"
+
+	anubisCookieName = "techaro.lol-anubis-auth"
+	sessionTTL       = 5 * time.Hour
 )
 
-func Search(opts Options) ([]OSSubtitle, error) {
+func (p *OpenSubtitlesOrg) search(opts Options) ([]OSOrgSubtitle, error) {
 	mustHaveCookies := []string{anubisCookieName, "cf_clearance"}
 
 	sessionManager := sessions.
@@ -32,8 +40,9 @@ func Search(opts Options) ([]OSSubtitle, error) {
 	if err != nil {
 		return nil, err
 	}
+	p.session = session
 
-	resp, err := session.DoRequest(encodeParams(searchURL, opts))
+	resp, err := p.session.DoRequest(encodeParams(searchPath, opts))
 	if err != nil {
 		return nil, err
 	}
@@ -45,15 +54,42 @@ func Search(opts Options) ([]OSSubtitle, error) {
 	}
 
 	title := getSubtitleTitle(doc)
+	if title == "" {
+		return nil, nil
+	}
 	fmt.Println("Title: ", title)
 
-	fmt.Println("Results: ", getSubtitleResults(doc))
+	subs := getSubtitleResults(doc)
 
-	return nil, nil
+	return subs, nil
 }
 
-func downloadSubtitle(opts Options, subtitle *OSSubtitle) (err error) {
+func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (err error) {
+	p.session.Client.WithBaseURL(opensubtitlesDLURL)
+
+	resp, err := p.session.DoRequest(pathFromID(subtitle.SubtitleID))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	file, err := os.OpenFile("sub.zip", os.O_CREATE|os.O_RDWR, 0o755)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, resp.Body)
 	return nil
+}
+
+func pathFromID(s string) string {
+	return dlPath + "/" + s
+}
+
+func extractSubID(path string) string {
+	elem := strings.Split(path, "/")
+	return elem[len(elem)-1]
 }
 
 func getSubtitleTitle(doc *goquery.Document) string {
@@ -65,27 +101,45 @@ func getSubtitleTitle(doc *goquery.Document) string {
 	return title
 }
 
-func getSubtitleResults(doc *goquery.Document) []OSSubtitle {
-	subs := make([]OSSubtitle, 0, 5)
+func getSubtitleResults(doc *goquery.Document) []OSOrgSubtitle {
+	subs := make([]OSOrgSubtitle, 0, 5)
 	rows := doc.Find(`#search_results > tbody > tr`)
 
 	rows.Each(func(i int, s *goquery.Selection) {
-		if i == 0 {
+		if !isResult(s) {
 			return
 		}
+
 		title := s.Find(`td:nth-child(1) a`).First().Text()
 		lang, _ := s.Find(`td:nth-child(2) > a`).Attr("title")
-		dl, _ := s.Find(`td:nth-child(5) > a`).Attr("href")
+		if lang != "English" {
+			return
+		}
+		dlPath, _ := s.Find(`td:nth-child(5) > a`).Attr("href")
 		votes := s.Find(`td:nth-child(6)`).First().Text()
-		subs = append(subs, OSSubtitle{
-			Name:        title,
-			Language:    lang,
-			DownloadURL: dl,
-			Votes:       votes,
+		subs = append(subs, OSOrgSubtitle{
+			Name:       cleanResultsTitle(title),
+			SubtitleID: extractSubID(dlPath),
+			Language:   lang,
+			Votes:      votes,
 		})
 	})
 
 	return subs
+}
+
+func isResult(row *goquery.Selection) bool {
+	_, exists := row.Attr("onclick")
+	return exists
+}
+
+func cleanResultsTitle(t string) string {
+	words := strings.Split(t, "\n")
+	for i := range words {
+		words[i] = strings.TrimSpace(words[i])
+	}
+
+	return strings.Join(words, " ")
 }
 
 func encodeParams(baseURL string, opts Options) string {
@@ -97,7 +151,12 @@ func encodeParams(baseURL string, opts Options) string {
 		filters = append(filters, fmt.Sprintf("%v-%v", "moviename", encodeName(opts.Query)))
 	}
 
-	filters = append(filters, fmt.Sprintf("%v-%v", "sublanguageid", "all"))
+	if opts.IsSerie {
+		filters = append(filters, fmt.Sprintf("%v-%v", "searchonlytvseries", "on"))
+	}
+	if opts.IsMovie {
+		filters = append(filters, fmt.Sprintf("%v-%v", "searchonlymovies", "on"))
+	}
 	if opts.Season != 0 {
 		filters = append(filters, fmt.Sprintf("%v-%v", "season", opts.Season))
 	}
@@ -106,12 +165,6 @@ func encodeParams(baseURL string, opts Options) string {
 	}
 	if opts.Language != "" {
 		filters = append(filters, fmt.Sprintf("%v-%v", "movielanguage", "english"))
-	}
-	if opts.IsSerie {
-		filters = append(filters, fmt.Sprintf("%v-%v", "searchonlytvseries", "on"))
-	}
-	if opts.IsSerie {
-		filters = append(filters, fmt.Sprintf("%v-%v", "searchonlymovies", "on"))
 	}
 	if opts.Year != 0 {
 		filters = append(filters, fmt.Sprintf("%v-%v", "movieyear", opts.Year))
@@ -129,8 +182,8 @@ func encodeParams(baseURL string, opts Options) string {
 
 func encodeName(n string) string {
 	words := strings.Split(n, " ")
-	if len(words) == 1 {
-		return words[0]
+	if len(words) == 0 {
+		return ""
 	}
 	sb := strings.Builder{}
 
