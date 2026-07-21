@@ -2,14 +2,17 @@
 package opensubtitlesorg
 
 import (
+	"archive/zip"
+	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers/sessions"
+	"github.com/kakeetopius/subg/internal/util"
 )
 
 const (
@@ -63,23 +66,45 @@ func (p *OpenSubtitlesOrg) search(opts Options) ([]OSOrgSubtitle, error) {
 	return subs, nil
 }
 
-func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (err error) {
+func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name string, sub io.ReadCloser, format formats.FormatType, err error) {
 	p.session.Client.WithBaseURL(opensubtitlesDLURL)
 
 	resp, err := p.session.DoRequest(pathFromID(subtitle.SubtitleID))
 	if err != nil {
-		return err
+		return
 	}
 	defer resp.Body.Close()
 
-	file, err := os.OpenFile("sub.zip", os.O_CREATE|os.O_RDWR, 0o755)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+	responseBytes, _ := io.ReadAll(resp.Body)
+	byteReader := bytes.NewReader(responseBytes)
+	byteReader.Seek(0, 0)
 
-	_, err = io.Copy(file, resp.Body)
-	return nil
+	zipReader, err := zip.NewReader(byteReader, byteReader.Size())
+	if err != nil {
+		return "", nil, 0, err
+	}
+
+	var subtitleFile *zip.File
+	for _, f := range zipReader.File {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+		if !formats.FileHasSubtitleExtension(f.Name) {
+			continue
+		}
+		subtitleFile = f
+		format, _ = formats.SubFormatFromFileName(subtitleFile.Name)
+		break
+	}
+	if subtitleFile == nil {
+		return "", nil, 0, fmt.Errorf("no subtitles found in the returned zip file")
+	}
+
+	subtitleFileBytes, err := subtitleFile.Open()
+	if err != nil {
+		return "", nil, 0, err
+	}
+	return util.StripExtension(subtitleFile.Name), subtitleFileBytes, format, nil
 }
 
 func pathFromID(s string) string {

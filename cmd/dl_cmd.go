@@ -62,8 +62,8 @@ The following is the list of supported providers so far in order of priority.
 				Language:       subtitleLang,
 				Year:           releaseYear,
 				SubtitleFormat: formatType,
-				OutPutFile:     outputFile,
-				OutPutDir:      outputDir,
+				OutputFile:     outputFile,
+				OutputDir:      outputDir,
 				IsMovie:        isMovie,
 				IsSerie:        isSerie,
 				AutoSelect:     autoSelect,
@@ -72,20 +72,20 @@ The following is the list of supported providers so far in order of priority.
 			for _, provider := range providersToUse {
 				switch provider {
 				case "os":
-					providerSet.WithProvider(&opensubtitles.OpenSubtitles{}, opensubtitles.OSOptions{
+					providerSet.Append(opensubtitles.NewProvider(opensubtitles.OSOptions{
 						APIKey:   appConfig.GetString("opensubtitles.api_key"),
 						CacheDir: appConfig.GetString("cache_dir"),
-					})
+					}))
 				case "sd":
-					providerSet.WithProvider(&subdl.SubDL{}, subdl.SubDLOpts{
+					providerSet.Append(subdl.NewProvider(subdl.SubDLOpts{
 						APIKey: appConfig.GetString("subdl.api_key"),
-					})
-				case "a7":
-					providerSet.WithProvider(&addic7ed.Addic7ed{})
+					}))
 				case "os_org":
-					providerSet.WithProvider(&opensubtitlesorg.OpenSubtitlesOrg{}, opensubtitlesorg.OSOrgOptions{
+					providerSet.Append(opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
 						CacheDir: appConfig.GetString("cache_dir"),
-					})
+					}))
+				case "a7":
+					providerSet.Append(addic7ed.NewProvider())
 
 				default:
 					return fmt.Errorf("unknown provider code: %s", provider)
@@ -119,15 +119,17 @@ The following is the list of supported providers so far in order of priority.
 }
 
 func addAllProvidersToSet(providerSet *providers.ProviderSet) {
-	providerSet.WithProvider(&opensubtitles.OpenSubtitles{}, opensubtitles.OSOptions{
-		APIKey:   appConfig.GetString("opensubtitles.api_key"),
-		CacheDir: appConfig.GetString("cache_dir"),
-	}).
-		WithProvider(&subdl.SubDL{}, subdl.SubDLOpts{
-			APIKey: appConfig.GetString("subdl.api_key"),
-		}).
-		WithProvider(&opensubtitlesorg.OpenSubtitlesOrg{}, opensubtitlesorg.OSOrgOptions{
+	providerSet.Append(
+		opensubtitles.NewProvider(opensubtitles.OSOptions{
+			APIKey:   appConfig.GetString("opensubtitles.api_key"),
 			CacheDir: appConfig.GetString("cache_dir"),
-		}).
-		WithProvider(&addic7ed.Addic7ed{})
+		}),
+		subdl.NewProvider(subdl.SubDLOpts{
+			APIKey: appConfig.GetString("subdl.api_key"),
+		}),
+		opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
+			CacheDir: appConfig.GetString("cache_dir"),
+		}),
+		addic7ed.NewProvider(),
+	)
 }

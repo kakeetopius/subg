@@ -1,4 +1,8 @@
-// Package sessions is used to manage sessions for providers that require it.
+// Package sessions manages authenticated sessions for HTTP providers.
+// It handles session cookies, authentication tokens, and other state required
+// to make authenticated requests. The package also provides HTTP clients that
+// automatically apply the appropriate session state when communicating with
+// providers.
 package sessions
 
 import (
@@ -36,7 +40,7 @@ type SessionManager struct {
 	CacheDir string
 	// After how long should saved sessions be considered expired and hence force refresh
 	SessionTTL time.Duration
-	// Cookies that must exist in session for domain
+	// Cookies that must exist in session for domains
 	MustHaveCookies map[string][]string
 	// Time to wait for clearance cookies if any
 	WaitDuration time.Duration
@@ -142,9 +146,7 @@ func (m SessionManager) saveSessionToCacheFile(domain string, s Session) error {
 	return os.WriteFile(path, out, 0o644)
 }
 
-// acquireSession launches a real, head-full Chrome to clear both the
-// Cloudflare challenge (cf_clearance) and the Anubis PoW challenge
-// (within.website-x-cmd-anubis-auth), then extracts cookies + UA.
+// acquireSession launches a real, to acquire required session information like authentication cookies, user agent etc.
 func (m SessionManager) acquireSession(domain, challengeURL string) (Session, error) {
 	fmt.Println("Browser window opened. Complete any challenges provided if prompted.")
 	fmt.Printf("Waiting up to %s for clearance cookies...\n", m.WaitDuration.String())

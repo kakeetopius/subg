@@ -3,12 +3,10 @@ package addic7ed
 
 import (
 	"fmt"
-	"os"
-	"path"
+	"io"
 
 	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
-	"github.com/kakeetopius/subg/internal/util"
 	"github.com/matcornic/addic7ed"
 	"github.com/pterm/pterm"
 )
@@ -61,30 +59,16 @@ func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 	return subtitles, nil
 }
 
-func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (err error) {
+func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (name string, subBytes io.ReadCloser, format formats.FormatType, err error) {
 	subtitle := addic7ed.Subtitle{
 		Language: opts.Language,
 		Version:  sub.Version,
 		Link:     sub.Link,
 	}
 
-	if opts.OutPutFile == "" {
-		opts.OutPutFile = opts.Query
-	}
-	if opts.OutPutDir != "" {
-		err = util.CreateDirIfNotExists(opts.OutPutDir)
-		if err != nil {
-			return err
-		}
-	}
-
-	opts.OutPutFile = util.StripExtension(opts.OutPutFile)
-	opts.OutPutFile = formats.AddExtensionToSubFile(opts.OutPutFile, opts.SubtitleFormat)
-	outPath := path.Join(opts.OutPutDir, opts.OutPutFile)
-
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
 	if err != nil {
-		return err
+		return
 	}
 	defer func() {
 		if err != nil {
@@ -92,31 +76,12 @@ func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (err error) {
 		}
 	}()
 
-	subtitleStream, err := subtitle.Download()
+	subtitleBytes, err := subtitle.Download()
 	if err != nil {
-		return err
-	}
-	defer subtitleStream.Close()
-
-	subFormatter, err := formats.NewSubFormat(formats.FormatTypeSRT, subtitleStream)
-	if err != nil {
-		return err
+		return
 	}
 
-	outFile, err := os.OpenFile(opts.OutPutFile, os.O_RDWR|os.O_CREATE, 0o644)
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
-
-	err = subFormatter.ConvertToAndWrite(opts.SubtitleFormat, outFile)
-	if err != nil {
-		return err
-	}
-
-	spinner.Success("Download Done.")
-	pterm.Info.Println("Subtitle saved at: ", outPath)
-	return nil
+	return "", subtitleBytes, formats.FormatTypeSRT, nil
 }
 
 func LanguageFullForm(s string) string {

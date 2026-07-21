@@ -2,6 +2,7 @@
 package formats
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"strings"
@@ -71,6 +72,10 @@ func SubFormatFromString(s string) (FormatType, error) {
 }
 
 func SubFormatFromFileNameOrFormatString(fileName string, format string) (FormatType, error) {
+	if fileName == "" && format == "" {
+		return 0, ErrCouldNotDetermineFormat
+	}
+
 	var outFileFormat FormatType
 	if fileName != "" {
 		outFileExt := util.ExtensionOf(fileName)
@@ -94,18 +99,19 @@ func SubFormatFromFileNameOrFormatString(fileName string, format string) (Format
 		return 0, ErrFormatMismatch
 	}
 
-	var formatType FormatType
-	if fileName != "" {
-		formatType = outFileFormat
-	} else if format != "" {
-		formatType = convertToFormat
-	} else {
-		return 0, ErrCouldNotDetermineFormat
-	}
+	return cmp.Or(convertToFormat, outFileFormat), nil
+}
 
-	return formatType, nil
+func SubFormatFromFileName(fileName string) (FormatType, error) {
+	return SubFormatFromString(util.ExtensionOf(fileName))
 }
 
 func AddExtensionToSubFile(file string, fileFormat FormatType) string {
 	return fmt.Sprintf("%s.%s", file, fileFormat)
+}
+
+func FileHasSubtitleExtension(fileName string) bool {
+	_, err := SubFormatFromString(util.ExtensionOf(fileName))
+
+	return err == nil
 }

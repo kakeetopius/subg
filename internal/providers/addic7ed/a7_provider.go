@@ -2,8 +2,10 @@ package addic7ed
 
 import (
 	"fmt"
+	"io"
 
 	"charm.land/bubbles/v2/table"
+	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/ui"
 )
@@ -14,15 +16,16 @@ type Addic7ed struct {
 	subtitles []A7Subtitle
 }
 
+func NewProvider() *Addic7ed {
+	return new(Addic7ed)
+}
+
 func (p *Addic7ed) Name() string {
 	return "addic7ed"
 }
 
 func (p *Addic7ed) WithOptions(opts providers.Options) {
 	p.opts = opts
-}
-
-func (p *Addic7ed) WithSpecificOptions(opts any) {
 }
 
 func (p *Addic7ed) SearchSubtitle() error {
@@ -40,15 +43,9 @@ func (p *Addic7ed) SearchSubtitle() error {
 	return nil
 }
 
-func (p *Addic7ed) Download(subs []providers.Subtitle) error {
-	for _, sub := range subs {
-		subtitle := sub.(A7Subtitle)
-		err := downloadSubtitle(&subtitle, p.opts)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func (p *Addic7ed) Download(sub providers.Subtitle) (string, io.ReadCloser, formats.FormatType, error) {
+	subtitle := sub.(A7Subtitle)
+	return downloadSubtitle(&subtitle, p.opts)
 }
 
 func (p *Addic7ed) DownloadBest() error {

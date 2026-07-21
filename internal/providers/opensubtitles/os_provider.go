@@ -2,8 +2,10 @@ package opensubtitles
 
 import (
 	"fmt"
+	"io"
 
 	"charm.land/bubbles/v2/table"
+	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/ui"
 )
@@ -24,6 +26,14 @@ type OSOptions struct {
 	CacheDir string
 }
 
+func NewProvider(opts OSOptions) *OpenSubtitles {
+	return &OpenSubtitles{
+		opts: options{
+			OSOptions: opts,
+		},
+	}
+}
+
 func (p *OpenSubtitles) Name() string {
 	return "opensubtitles"
 }
@@ -42,12 +52,6 @@ func (p *OpenSubtitles) WithOptions(opts providers.Options) {
 	p.opts.Options = opts
 }
 
-func (p *OpenSubtitles) WithSpecificOptions(opts any) {
-	if options, ok := opts.(OSOptions); ok {
-		p.opts.OSOptions = options
-	}
-}
-
 func (p *OpenSubtitles) SearchSubtitle() error {
 	subs, err := searchSubtitle(p.opts)
 	if err != nil {
@@ -63,15 +67,9 @@ func (p *OpenSubtitles) SearchSubtitle() error {
 	return nil
 }
 
-func (p *OpenSubtitles) Download(subs []providers.Subtitle) error {
-	for _, sub := range subs {
-		subtitle := sub.(OSSubtitle)
-		err := downloadSubtitle(p.opts, &subtitle)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func (p *OpenSubtitles) Download(sub providers.Subtitle) (string, io.ReadCloser, formats.FormatType, error) {
+	subtitle := sub.(OSSubtitle)
+	return downloadSubtitle(p.opts, &subtitle)
 }
 
 func (p *OpenSubtitles) DownloadBest() error {

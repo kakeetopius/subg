@@ -9,6 +9,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.10.2
 	github.com/angelospk/opensubtitles-go v0.5.0
 	github.com/asticode/go-astisub v0.40.0
+	github.com/caarlos0/go-version v0.2.2
 	github.com/chromedp/cdproto v0.0.0-20260321001828-e3e3800016bc
 	github.com/chromedp/chromedp v0.15.1
 	github.com/google/go-querystring v1.2.0

@@ -37,16 +37,12 @@ func NewSubFormat(subtitleType FormatType, r io.Reader) (SubFormat, error) {
 		return SubFormat{}, err
 	}
 
-	srtSub := SubFormat{subtitle: sub, formatType: subtitleType}
+	subFormat := SubFormat{subtitle: sub, formatType: subtitleType}
 
-	return srtSub, nil
+	return subFormat, nil
 }
 
 func NewSubFormatFromFile(fileName string) (SubFormat, error) {
-	fileExt := util.ExtensionOf(fileName)
-	if fileExt == "" {
-		return SubFormat{}, fmt.Errorf("could not determine subtitle format of file: %s", fileName)
-	}
 	formatType, err := SubFormatFromString(util.ExtensionOf(fileName))
 	if err != nil {
 		return SubFormat{}, err

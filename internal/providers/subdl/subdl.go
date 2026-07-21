@@ -7,9 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path"
-	"strings"
 
 	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/util"
@@ -67,26 +64,16 @@ func searchSubtitles(opts options) ([]SDSubtitle, error) {
 	return results.Subtitles, nil
 }
 
-func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
+func downloadSubtitle(subtitle *SDSubtitle) (name string, subBytes io.ReadCloser, format formats.FormatType, err error) {
 	if subtitle == nil {
-		return fmt.Errorf("no subtitle provided for download")
+		err = fmt.Errorf("no subtitle provided for download")
+		return
 	}
 	url := SUBDLDOWNLOADURL + subtitle.URL
 
-	if opts.OutPutDir != "" {
-		err = util.CreateDirIfNotExists(opts.OutPutDir)
-		if err != nil {
-			return err
-		}
-	}
-
-	tmpDir := os.TempDir()
-	zipOutfile := fmt.Sprintf("%v.%v", subtitle.ReleaseName, "zip")
-
-	zipOutfile = path.Join(tmpDir, zipOutfile)
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
 	if err != nil {
-		return err
+		return
 	}
 	defer func() {
 		if err == nil {
@@ -99,101 +86,38 @@ func downloadSubtitle(subtitle *SDSubtitle, opts options) (err error) {
 	client := http.Client{}
 	resp, err := client.Get(url)
 	if err != nil {
-		return err
+		return
 	}
 	defer resp.Body.Close()
 
-	outFile, err := os.OpenFile(zipOutfile, os.O_RDWR|os.O_CREATE, 0o644)
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
+	responseBytes, _ := io.ReadAll(resp.Body)
+	byteReader := bytes.NewReader(responseBytes)
+	byteReader.Seek(0, 0)
 
-	zipBytes, err := io.ReadAll(resp.Body)
+	zipReader, err := zip.NewReader(byteReader, byteReader.Size())
 	if err != nil {
-		return err
-	}
-	fmt.Println("Response.....\n", string(zipBytes))
-
-	zipBytesReader := bytes.NewReader(zipBytes)
-	_, err = io.Copy(outFile, zipBytesReader)
-	if err != nil {
-		return err
+		return "", nil, 0, err
 	}
 
-	pterm.Info.Printf("Extracting zip file...............\n")
-	return extractSubtitlesFromZip(zipBytesReader, opts)
-}
-
-func extractSubtitlesFromZip(zipBytes *bytes.Reader, opts options) error {
-	zipBytes.Seek(0, 0) // reset to start
-	zipper, err := zip.NewReader(zipBytes, zipBytes.Size())
-	if err != nil {
-		return err
-	}
-
-	var allFiles []*zip.File
-	for _, f := range zipper.File {
-		// get files only
-		if !f.FileInfo().IsDir() {
-			allFiles = append(allFiles, f)
+	var subtitleFile *zip.File
+	for _, f := range zipReader.File {
+		if f.FileInfo().IsDir() {
+			continue
 		}
-	}
-
-	var srtFiles []*zip.File
-	for _, f := range allFiles {
-		// find all .srt files
-		if strings.HasSuffix(f.Name, ".srt") {
-			srtFiles = append(srtFiles, f)
+		if !formats.FileHasSubtitleExtension(f.Name) {
+			continue
 		}
+		subtitleFile = f
+		format, _ = formats.SubFormatFromFileName(subtitleFile.Name)
+		break
+	}
+	if subtitleFile == nil {
+		return "", nil, 0, fmt.Errorf("no subtitles found in the returned zip file")
 	}
 
-	for i, f := range srtFiles {
-		err = saveSubtitle(f, opts.OutPutDir, opts.OutPutFile, opts.SubtitleFormat, i)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func saveSubtitle(zf *zip.File, outdir string, outfile string, subFormat formats.FormatType, fileNum int) error {
-	subtitleFileFromZip, err := zf.Open()
+	subtitleFileBytes, err := subtitleFile.Open()
 	if err != nil {
-		return err
+		return "", nil, 0, err
 	}
-	defer subtitleFileFromZip.Close()
-
-	subFormatter, err := formats.NewSubFormat(formats.FormatTypeSRT, subtitleFileFromZip)
-	if err != nil {
-		return err
-	}
-
-	var outFileName string
-	if outfile != "" {
-		if fileNum != 0 {
-			outFileName = fmt.Sprintf("%v-%v", util.StripExtension(outfile), fileNum)
-		} else {
-			outFileName = util.StripExtension(outfile)
-		}
-	} else {
-		outFileName = util.StripExtension(zf.Name)
-	}
-
-	outFileName = formats.AddExtensionToSubFile(outFileName, subFormat)
-	outFileName = path.Join(outdir, outFileName)
-
-	outFile, err := os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE, 0o644)
-	if err != nil {
-		return err
-	}
-	defer outFile.Close()
-
-	err = subFormatter.ConvertToAndWrite(subFormat, outFile)
-	if err != nil {
-		return err
-	}
-	pterm.Info.Println("Subtitle saved at: ", outFileName)
-	return nil
+	return util.StripExtension(subtitleFile.Name), subtitleFileBytes, format, nil
 }

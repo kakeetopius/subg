@@ -2,8 +2,10 @@ package subdl
 
 import (
 	"fmt"
+	"io"
 
 	"charm.land/bubbles/v2/table"
+	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/ui"
 )
@@ -23,6 +25,14 @@ type SubDLOpts struct {
 	APIKey string
 }
 
+func NewProvider(opts SubDLOpts) *SubDL {
+	return &SubDL{
+		opts: options{
+			SubDLOpts: opts,
+		},
+	}
+}
+
 func (p *SubDL) Name() string {
 	return "subdl.com"
 }
@@ -37,12 +47,6 @@ func (p *SubDL) WithOptions(opts providers.Options) {
 	p.opts.Type = featureType
 
 	p.opts.Options = opts
-}
-
-func (p *SubDL) WithSpecificOptions(opts any) {
-	if options, ok := opts.(SubDLOpts); ok {
-		p.opts.SubDLOpts = options
-	}
 }
 
 func (p *SubDL) SearchSubtitle() error {
@@ -61,15 +65,9 @@ func (p *SubDL) SearchSubtitle() error {
 	return nil
 }
 
-func (p *SubDL) Download(subs []providers.Subtitle) error {
-	for _, sub := range subs {
-		subtitle := sub.(SDSubtitle)
-		err := downloadSubtitle(&subtitle, p.opts)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+func (p *SubDL) Download(sub providers.Subtitle) (string, io.ReadCloser, formats.FormatType, error) {
+	subtitle := sub.(SDSubtitle)
+	return downloadSubtitle(&subtitle)
 }
 
 func (p *SubDL) DownloadBest() error {

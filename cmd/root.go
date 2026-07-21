@@ -6,15 +6,15 @@ import (
 	"os"
 	"path"
 
+	goversion "github.com/caarlos0/go-version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var (
-	debug       bool
-	cfgFile     string
-	subgVersion = "subg v.0.1.3"
-	appConfig   *viper.Viper
+	debug     bool
+	cfgFile   string
+	appConfig *viper.Viper
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -22,6 +22,7 @@ var rootCmd = &cobra.Command{
 	Use:          "subg",
 	Short:        "A tool for downloading, generating, and manipulating subtitles.",
 	SilenceUsage: true,
+	Version:      buildVersion().GitVersion,
 
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		return initConfig()
@@ -78,18 +79,12 @@ func initConfig() error {
 		// Use config file from the flag.
 		appConfig.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return err
-		}
 		configDir, err := os.UserConfigDir()
 		if err != nil {
 			return err
 		}
 
 		// Search config in home directory with name "subg" (without extension).
-		appConfig.AddConfigPath(home)
 		appConfig.AddConfigPath(configDir)
 		appConfig.AddConfigPath(path.Join(configDir, "subg"))
 		appConfig.SetConfigName("subg")
@@ -115,10 +110,18 @@ func initConfig() error {
 
 func versionCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "version",
-		Short: "Get the version",
+		Use:     "version",
+		Short:   "Show detailed version information",
+		Aliases: []string{"v"},
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(subgVersion)
+			fmt.Println(buildVersion().String())
 		},
 	}
+}
+
+// buildVersion constructs and returns the application's version information.
+func buildVersion() goversion.Info {
+	return goversion.GetVersionInfo(
+		goversion.WithAppDetails("subg", "Tool to work with subtitles.", ""),
+	)
 }

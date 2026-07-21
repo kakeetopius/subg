@@ -9,7 +9,7 @@ import (
 
 func CreateFileIfNotExists(fileName string) (*os.File, error) {
 	if FileExists(fileName) {
-		return os.Open(fileName)
+		return os.OpenFile(fileName, os.O_RDWR|os.O_TRUNC, 0o755)
 	}
 
 	err := CreateDirIfNotExists(path.Dir(fileName))
