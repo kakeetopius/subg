@@ -2,8 +2,6 @@
 package opensubtitlesorg
 
 import (
-	"archive/zip"
-	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -13,6 +11,8 @@ import (
 	"github.com/kakeetopius/subg/internal/providers/sessions"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
+	"github.com/kakeetopius/subg/internal/zip"
+	"github.com/pterm/pterm"
 )
 
 const (
@@ -66,8 +66,20 @@ func (p *OpenSubtitlesOrg) search(opts Options) ([]OSOrgSubtitle, error) {
 	return subs, nil
 }
 
-func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name string, sub io.ReadCloser, format subformat.FormatType, err error) {
+func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name string, subBytes io.ReadCloser, format subformat.FormatType, err error) {
 	p.session.Client.WithBaseURL(opensubtitlesDLURL)
+
+	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
+	if err != nil {
+		return
+	}
+	defer func() {
+		if err == nil {
+			spinner.Success("Download Done")
+		} else {
+			spinner.Fail()
+		}
+	}()
 
 	resp, err := p.session.DoRequest(pathFromID(subtitle.SubtitleID))
 	if err != nil {
@@ -75,36 +87,26 @@ func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name strin
 	}
 	defer resp.Body.Close()
 
-	responseBytes, _ := io.ReadAll(resp.Body)
-	byteReader := bytes.NewReader(responseBytes)
-	byteReader.Seek(0, 0)
+	subFiles, err := zip.SubtitleFilesFromZip(resp.Body)
+	if err != nil {
+		return "", nil, 0, err
+	}
+	if len(subFiles) == 0 {
+		err = fmt.Errorf("no subtitle files found in the zip file")
+		return
+	}
 
-	zipReader, err := zip.NewReader(byteReader, byteReader.Size())
+	subFile := subFiles[0]
+	format, err = subformat.SubFormatFromFileName(subFile.Name)
+	if err != nil {
+		return "", nil, 0, err
+	}
+	subBytes, err = subFile.Open()
 	if err != nil {
 		return "", nil, 0, err
 	}
 
-	var subtitleFile *zip.File
-	for _, f := range zipReader.File {
-		if f.FileInfo().IsDir() {
-			continue
-		}
-		if !subformat.FileHasSubtitleExtension(f.Name) {
-			continue
-		}
-		subtitleFile = f
-		format, _ = subformat.SubFormatFromFileName(subtitleFile.Name)
-		break
-	}
-	if subtitleFile == nil {
-		return "", nil, 0, fmt.Errorf("no subtitles found in the returned zip file")
-	}
-
-	subtitleFileBytes, err := subtitleFile.Open()
-	if err != nil {
-		return "", nil, 0, err
-	}
-	return util.StripExtension(subtitleFile.Name), subtitleFileBytes, format, nil
+	return util.StripExtension(subFile.Name), subBytes, format, nil
 }
 
 func pathFromID(s string) string {

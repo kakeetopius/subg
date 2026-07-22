@@ -105,7 +105,6 @@ func (c *Client) doRequest(ctx context.Context, method, path string, params any,
 		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
 	fullURL.Path += path // Assumes baseURL doesn't end with / and path starts with /
-	fmt.Println(fullURL.String())
 
 	// Encode query parameters if provided
 	if params != nil {

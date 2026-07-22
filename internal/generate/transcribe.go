@@ -20,7 +20,7 @@ type TransciberOptions struct {
 	SubtitleFormat subformat.FormatType
 
 	InputFiles []string
-	OutPutDir  string
+	OutputDir  string
 	Language   string
 	Translate  bool
 
@@ -88,8 +88,8 @@ func transcribeFile(opts *TransciberOptions) error {
 	if opts.Language != "" {
 		flags = append(flags, "--language", opts.Language)
 	}
-	if opts.OutPutDir != "" {
-		flags = append(flags, "--output_dir", opts.OutPutDir)
+	if opts.OutputDir != "" {
+		flags = append(flags, "--output_dir", opts.OutputDir)
 	}
 
 	args := buildArgs(opts.InputFiles, flags)
@@ -109,8 +109,8 @@ func translateFiles(opts *TransciberOptions) error {
 	if opts.Language != "" {
 		flags = append(flags, "--language", opts.Language)
 	}
-	if opts.OutPutDir != "" {
-		flags = append(flags, "--output_dir", opts.OutPutDir)
+	if opts.OutputDir != "" {
+		flags = append(flags, "--output_dir", opts.OutputDir)
 	}
 
 	args := buildArgs(opts.InputFiles, flags)
@@ -146,13 +146,13 @@ func runTranscriber(opts *TransciberOptions, args []string) error {
 
 func convertFilesToGivenFormatAndSave(opts *TransciberOptions) error {
 	var err error
-	if opts.OutPutDir != "" {
-		err = util.CreateDirIfNotExists(opts.OutPutDir)
+	if opts.OutputDir != "" {
+		err = util.CreateDirIfNotExists(opts.OutputDir)
 		if err != nil {
 			return err
 		}
 	}
-	outDir := opts.OutPutDir
+	outDir := opts.OutputDir
 
 	for _, file := range opts.InputFiles {
 		// generated file in srt format

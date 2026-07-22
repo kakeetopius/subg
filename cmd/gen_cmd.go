@@ -33,7 +33,7 @@ func GenCmd() *cobra.Command {
 				InputFiles:     args,
 				SubtitleFormat: subFormat,
 				Translate:      translate,
-				OutPutDir:      outputDir,
+				OutputDir:      outputDir,
 				Language:       language,
 
 				Model: model,
