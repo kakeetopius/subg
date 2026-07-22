@@ -48,8 +48,8 @@ func (p *Addic7ed) Download(sub providers.Subtitle) (string, io.ReadCloser, subf
 	return downloadSubtitle(&subtitle, p.opts)
 }
 
-func (p *Addic7ed) DownloadBest() error {
-	return nil
+func (p *Addic7ed) DownloadBest() (string, io.ReadCloser, subformat.FormatType, error) {
+	return downloadSubtitle(&p.subtitles[0], p.opts)
 }
 
 func (p *Addic7ed) DisplaySelections() ([]providers.Subtitle, error) {

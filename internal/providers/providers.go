@@ -29,7 +29,7 @@ type Provider interface {
 
 	Download(Subtitle) (string, io.ReadCloser, subformat.FormatType, error)
 
-	DownloadBest() error
+	DownloadBest() (string, io.ReadCloser, subformat.FormatType, error)
 }
 
 type Subtitle any
@@ -115,11 +115,11 @@ func (set *ProviderSet) searchSubtitleWithProvider(provider Provider) error {
 	}
 
 	if set.options.AutoSelect {
-		err = provider.DownloadBest()
-		if err != nil {
-			return err
+		name, subBytes, downloadedFormat, dlErr := provider.DownloadBest()
+		if dlErr != nil {
+			return dlErr
 		}
-		return nil
+		return set.saveSubtitle(name, subBytes, downloadedFormat)
 	}
 
 	selected, err := provider.DisplaySelections()
@@ -128,7 +128,12 @@ func (set *ProviderSet) searchSubtitleWithProvider(provider Provider) error {
 	}
 
 	for _, sub := range selected {
-		err := set.downloadAndSaveSubtitle(sub, provider)
+		name, subBytes, downloadedFormat, err := provider.Download(sub)
+		if err != nil {
+			return err
+		}
+
+		err = set.saveSubtitle(name, subBytes, downloadedFormat)
 		if err != nil {
 			return err
 		}
@@ -137,18 +142,13 @@ func (set *ProviderSet) searchSubtitleWithProvider(provider Provider) error {
 	return nil
 }
 
-func (set *ProviderSet) downloadAndSaveSubtitle(subtitle Subtitle, provider Provider) error {
-	name, subBytes, downloadedFormat, err := provider.Download(subtitle)
-	if err != nil {
-		return err
-	}
+func (set *ProviderSet) saveSubtitle(name string, subBytes io.ReadCloser, format subformat.FormatType) error {
 	defer subBytes.Close()
 
-	subFormatter, err := subformat.NewSubFormatter(downloadedFormat, subBytes)
+	subFormatter, err := subformat.NewSubFormatter(format, subBytes)
 	if err != nil {
 		return err
 	}
-
 	opts := set.options
 	var outFileName string
 	if opts.OutputFile != "" {

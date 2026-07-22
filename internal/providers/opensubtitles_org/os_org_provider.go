@@ -77,8 +77,8 @@ func (p *OpenSubtitlesOrg) Download(sub providers.Subtitle) (string, io.ReadClos
 	return p.downloadSubtitle(&subtitle)
 }
 
-func (p *OpenSubtitlesOrg) DownloadBest() error {
-	return nil
+func (p *OpenSubtitlesOrg) DownloadBest() (string, io.ReadCloser, subformat.FormatType, error) {
+	return p.downloadSubtitle(&p.subtitles[0])
 }
 
 func (p *OpenSubtitlesOrg) DisplaySelections() ([]providers.Subtitle, error) {

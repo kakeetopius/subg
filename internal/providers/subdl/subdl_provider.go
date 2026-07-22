@@ -70,8 +70,8 @@ func (p *SubDL) Download(sub providers.Subtitle) (string, io.ReadCloser, subform
 	return downloadSubtitle(&subtitle)
 }
 
-func (p *SubDL) DownloadBest() error {
-	return nil
+func (p *SubDL) DownloadBest() (string, io.ReadCloser, subformat.FormatType, error) {
+	return downloadSubtitle(&p.subtitles[0])
 }
 
 func (p *SubDL) DisplaySelections() ([]providers.Subtitle, error) {
