@@ -6,7 +6,7 @@ import (
 
 	"charm.land/bubbles/v2/table"
 	"github.com/kakeetopius/subg/internal/providers"
-	"github.com/kakeetopius/subg/internal/providers/sessions"
+	"github.com/kakeetopius/subg/internal/sessions"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/ui"
 )
@@ -26,6 +26,7 @@ type OSOrgSubtitle struct {
 	Votes      string
 	Language   string
 }
+
 type Options struct {
 	providers.Options
 	OSOrgOptions

@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/kakeetopius/subg/internal/providers/sessions"
+	"github.com/kakeetopius/subg/internal/sessions"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/kakeetopius/subg/internal/zip"
