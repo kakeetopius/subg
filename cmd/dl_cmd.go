@@ -4,12 +4,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/providers/addic7ed"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
 	opensubtitlesorg "github.com/kakeetopius/subg/internal/providers/opensubtitles_org"
 	"github.com/kakeetopius/subg/internal/providers/subdl"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/spf13/cobra"
 )
 
@@ -46,9 +46,9 @@ The following is the list of supported providers so far in order of priority.
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			providersToUse := appConfig.GetStringSlice("providers")
 
-			formatType, err := formats.SubFormatFromFileNameOrFormatString(outputFile, subtitleFormat)
+			formatType, err := subformat.SubFormatFromFileNameOrFormatString(outputFile, subtitleFormat)
 			if err != nil {
-				if errors.Is(err, formats.ErrCouldNotDetermineFormat) {
+				if errors.Is(err, subformat.ErrCouldNotDetermineFormat) {
 					return fmt.Errorf("could not determine which format to download. use either the --format flag or give an output file with the correct extension")
 				}
 				return err

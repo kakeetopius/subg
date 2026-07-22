@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/angelospk/opensubtitles-go"
-	"github.com/kakeetopius/subg/internal/formats"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
 )
@@ -214,7 +214,7 @@ func newClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.
 	return client, nil
 }
 
-func downloadSubtitle(opts options, subtitle *OSSubtitle) (name string, sub io.ReadCloser, format formats.FormatType, err error) {
+func downloadSubtitle(opts options, subtitle *OSSubtitle) (name string, sub io.ReadCloser, format subformat.FormatType, err error) {
 	// To download from opensubtitles the user must have already logged in a session info cached.
 	client, err := newClientFromCachedConfigs(opts.APIKey, opts.CacheDir)
 	if err != nil {
@@ -253,5 +253,5 @@ func downloadSubtitle(opts options, subtitle *OSSubtitle) (name string, sub io.R
 		return
 	}
 
-	return file2Download.FileName, resp.Body, formats.FormatTypeSRT, nil
+	return file2Download.FileName, resp.Body, subformat.FormatTypeSRT, nil
 }

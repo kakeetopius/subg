@@ -1,5 +1,5 @@
-// Package formats is used to manipulate different subtitle formats.
-package formats
+// Package subformat is used to manipulate different subtitle formats.
+package subformat
 
 import (
 	"cmp"
@@ -71,6 +71,10 @@ func SubFormatFromString(s string) (FormatType, error) {
 	return 0, fmt.Errorf("unsupported format: %v", s)
 }
 
+func SubFormatFromFileName(fileName string) (FormatType, error) {
+	return SubFormatFromString(util.ExtensionOf(fileName))
+}
+
 func SubFormatFromFileNameOrFormatString(fileName string, format string) (FormatType, error) {
 	if fileName == "" && format == "" {
 		return 0, ErrCouldNotDetermineFormat
@@ -100,10 +104,6 @@ func SubFormatFromFileNameOrFormatString(fileName string, format string) (Format
 	}
 
 	return cmp.Or(convertToFormat, outFileFormat), nil
-}
-
-func SubFormatFromFileName(fileName string) (FormatType, error) {
-	return SubFormatFromString(util.ExtensionOf(fileName))
 }
 
 func AddExtensionToSubFile(file string, fileFormat FormatType) string {

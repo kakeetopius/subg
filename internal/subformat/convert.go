@@ -1,4 +1,4 @@
-package formats
+package subformat
 
 import (
 	"fmt"
@@ -9,12 +9,12 @@ import (
 	"github.com/kakeetopius/subg/internal/util"
 )
 
-type SubFormat struct {
+type Formatter struct {
 	subtitle   *astisub.Subtitles
 	formatType FormatType
 }
 
-func NewSubFormat(subtitleType FormatType, r io.Reader) (SubFormat, error) {
+func NewSubFormatter(subtitleType FormatType, r io.Reader) (Formatter, error) {
 	var sub *astisub.Subtitles
 	var err error
 
@@ -30,42 +30,42 @@ func NewSubFormat(subtitleType FormatType, r io.Reader) (SubFormat, error) {
 	case FormatTypeVTT:
 		sub, err = astisub.ReadFromWebVTT(r)
 	default:
-		return SubFormat{}, fmt.Errorf("invalid subtitle format type: %v", subtitleType)
+		return Formatter{}, fmt.Errorf("invalid subtitle format type: %v", subtitleType)
 	}
 
 	if err != nil {
-		return SubFormat{}, err
+		return Formatter{}, err
 	}
 
-	subFormat := SubFormat{subtitle: sub, formatType: subtitleType}
+	subFormat := Formatter{subtitle: sub, formatType: subtitleType}
 
 	return subFormat, nil
 }
 
-func NewSubFormatFromFile(fileName string) (SubFormat, error) {
+func NewSubFormatterFromFile(fileName string) (Formatter, error) {
 	formatType, err := SubFormatFromString(util.ExtensionOf(fileName))
 	if err != nil {
-		return SubFormat{}, err
+		return Formatter{}, err
 	}
 
 	file, err := os.Open(fileName)
 	if err != nil {
-		return SubFormat{}, err
+		return Formatter{}, err
 	}
 	defer file.Close()
-	return NewSubFormat(formatType, file)
+	return NewSubFormatter(formatType, file)
 }
 
-func (s *SubFormat) Type() FormatType {
+func (s *Formatter) Type() FormatType {
 	return s.formatType
 }
 
-func (s *SubFormat) ConvertToAndWrite(newFormatType FormatType, out io.Writer) error {
+func (s *Formatter) ConvertToAndWrite(newFormatType FormatType, out io.Writer) error {
 	s.formatType = newFormatType
 	return s.Write(out)
 }
 
-func (s *SubFormat) Write(w io.Writer) error {
+func (s *Formatter) Write(w io.Writer) error {
 	var err error
 
 	switch s.formatType {

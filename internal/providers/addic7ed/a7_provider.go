@@ -5,8 +5,8 @@ import (
 	"io"
 
 	"charm.land/bubbles/v2/table"
-	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/ui"
 )
 
@@ -43,7 +43,7 @@ func (p *Addic7ed) SearchSubtitle() error {
 	return nil
 }
 
-func (p *Addic7ed) Download(sub providers.Subtitle) (string, io.ReadCloser, formats.FormatType, error) {
+func (p *Addic7ed) Download(sub providers.Subtitle) (string, io.ReadCloser, subformat.FormatType, error) {
 	subtitle := sub.(A7Subtitle)
 	return downloadSubtitle(&subtitle, p.opts)
 }

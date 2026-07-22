@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kakeetopius/subg/internal/formats"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/spf13/cobra"
 )
@@ -26,14 +26,14 @@ Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 		Aliases: []string{"c"},
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			formatter, err := formats.NewSubFormatFromFile(inFile)
+			formatter, err := subformat.NewSubFormatterFromFile(inFile)
 			if err != nil {
 				return err
 			}
 
-			formatType, err := formats.SubFormatFromFileNameOrFormatString(outFile, convertTo)
+			formatType, err := subformat.SubFormatFromFileNameOrFormatString(outFile, convertTo)
 			if err != nil {
-				if errors.Is(err, formats.ErrCouldNotDetermineFormat) {
+				if errors.Is(err, subformat.ErrCouldNotDetermineFormat) {
 					return fmt.Errorf("could not determine which format to convert to. use either the --convert-to flag or give an output file with the correct extension")
 				}
 				return err
@@ -41,7 +41,7 @@ Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 
 			if outFile == "" {
 				outFile = util.StripExtension(inFile)
-				outFile = formats.AddExtensionToSubFile(outFile, formatType)
+				outFile = subformat.AddExtensionToSubFile(outFile, formatType)
 			}
 
 			outFile, err := os.OpenFile(outFile, os.O_RDWR|os.O_CREATE, 0o644)

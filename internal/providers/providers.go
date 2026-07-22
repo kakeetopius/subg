@@ -10,7 +10,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/kakeetopius/subg/internal/formats"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/ui"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
@@ -27,7 +27,7 @@ type Provider interface {
 
 	DisplaySelections() ([]Subtitle, error)
 
-	Download(Subtitle) (string, io.ReadCloser, formats.FormatType, error)
+	Download(Subtitle) (string, io.ReadCloser, subformat.FormatType, error)
 
 	DownloadBest() error
 }
@@ -54,7 +54,7 @@ type Options struct {
 	IsSerie  bool
 
 	// Download Options
-	SubtitleFormat formats.FormatType
+	SubtitleFormat subformat.FormatType
 	OutputFile     string
 	OutputDir      string
 	AutoSelect     bool
@@ -144,7 +144,7 @@ func (set *ProviderSet) downloadAndSaveSubtitle(subtitle Subtitle, provider Prov
 	}
 	defer subBytes.Close()
 
-	subFormatter, err := formats.NewSubFormat(downloadedFormat, subBytes)
+	subFormatter, err := subformat.NewSubFormatter(downloadedFormat, subBytes)
 	if err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (set *ProviderSet) downloadAndSaveSubtitle(subtitle Subtitle, provider Prov
 		outFileName = cmp.Or(name, opts.defaultOutputFileName())
 	}
 
-	outFileName = formats.AddExtensionToSubFile(outFileName, opts.SubtitleFormat)
+	outFileName = subformat.AddExtensionToSubFile(outFileName, opts.SubtitleFormat)
 	outFileName = path.Join(opts.OutputDir, outFileName)
 
 	if opts.OutputDir != "" {

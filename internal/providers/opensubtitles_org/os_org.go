@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers/sessions"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 )
 
@@ -66,7 +66,7 @@ func (p *OpenSubtitlesOrg) search(opts Options) ([]OSOrgSubtitle, error) {
 	return subs, nil
 }
 
-func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name string, sub io.ReadCloser, format formats.FormatType, err error) {
+func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name string, sub io.ReadCloser, format subformat.FormatType, err error) {
 	p.session.Client.WithBaseURL(opensubtitlesDLURL)
 
 	resp, err := p.session.DoRequest(pathFromID(subtitle.SubtitleID))
@@ -89,11 +89,11 @@ func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name strin
 		if f.FileInfo().IsDir() {
 			continue
 		}
-		if !formats.FileHasSubtitleExtension(f.Name) {
+		if !subformat.FileHasSubtitleExtension(f.Name) {
 			continue
 		}
 		subtitleFile = f
-		format, _ = formats.SubFormatFromFileName(subtitleFile.Name)
+		format, _ = subformat.SubFormatFromFileName(subtitleFile.Name)
 		break
 	}
 	if subtitleFile == nil {

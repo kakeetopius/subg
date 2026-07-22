@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/kakeetopius/subg/internal/formats"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
 )
@@ -64,7 +64,7 @@ func searchSubtitles(opts options) ([]SDSubtitle, error) {
 	return results.Subtitles, nil
 }
 
-func downloadSubtitle(subtitle *SDSubtitle) (name string, subBytes io.ReadCloser, format formats.FormatType, err error) {
+func downloadSubtitle(subtitle *SDSubtitle) (name string, subBytes io.ReadCloser, format subformat.FormatType, err error) {
 	if subtitle == nil {
 		err = fmt.Errorf("no subtitle provided for download")
 		return
@@ -104,11 +104,11 @@ func downloadSubtitle(subtitle *SDSubtitle) (name string, subBytes io.ReadCloser
 		if f.FileInfo().IsDir() {
 			continue
 		}
-		if !formats.FileHasSubtitleExtension(f.Name) {
+		if !subformat.FileHasSubtitleExtension(f.Name) {
 			continue
 		}
 		subtitleFile = f
-		format, _ = formats.SubFormatFromFileName(subtitleFile.Name)
+		format, _ = subformat.SubFormatFromFileName(subtitleFile.Name)
 		break
 	}
 	if subtitleFile == nil {

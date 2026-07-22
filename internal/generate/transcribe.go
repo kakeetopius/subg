@@ -11,13 +11,13 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/kakeetopius/subg/internal/formats"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
 )
 
 type TransciberOptions struct {
-	SubtitleFormat formats.FormatType
+	SubtitleFormat subformat.FormatType
 
 	InputFiles []string
 	OutPutDir  string
@@ -157,12 +157,12 @@ func convertFilesToGivenFormatAndSave(opts *TransciberOptions) error {
 	for _, file := range opts.InputFiles {
 		// generated file in srt format
 		inFile := util.StripExtension(file)
-		inFile = formats.AddExtensionToSubFile(inFile, formats.FormatTypeSRT)
+		inFile = subformat.AddExtensionToSubFile(inFile, subformat.FormatTypeSRT)
 		inFile = filepath.Join(outDir, inFile)
 
 		// final file with correct format
 		outFile := util.StripExtension(file)
-		outFile = formats.AddExtensionToSubFile(outFile, opts.SubtitleFormat)
+		outFile = subformat.AddExtensionToSubFile(outFile, opts.SubtitleFormat)
 		outFile = filepath.Join(outDir, outFile)
 
 		err := convertFile(inFile, outFile, opts.SubtitleFormat)
@@ -174,8 +174,8 @@ func convertFilesToGivenFormatAndSave(opts *TransciberOptions) error {
 	return nil
 }
 
-func convertFile(infile string, outfile string, subFormat formats.FormatType) error {
-	if subFormat == formats.FormatTypeSRT {
+func convertFile(infile string, outfile string, subFormat subformat.FormatType) error {
+	if subFormat == subformat.FormatTypeSRT {
 		// if it is an srt file no need to convert
 		return nil
 	}
@@ -185,7 +185,7 @@ func convertFile(infile string, outfile string, subFormat formats.FormatType) er
 	}
 	defer f.Close()
 
-	subFormatter, err := formats.NewSubFormat(formats.FormatTypeSRT, f)
+	subFormatter, err := subformat.NewSubFormatter(subformat.FormatTypeSRT, f)
 	if err != nil {
 		return err
 	}

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/providers"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/matcornic/addic7ed"
 	"github.com/pterm/pterm"
 )
@@ -59,7 +59,7 @@ func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 	return subtitles, nil
 }
 
-func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (name string, subBytes io.ReadCloser, format formats.FormatType, err error) {
+func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (name string, subBytes io.ReadCloser, format subformat.FormatType, err error) {
 	subtitle := addic7ed.Subtitle{
 		Language: opts.Language,
 		Version:  sub.Version,
@@ -81,7 +81,7 @@ func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (name string, sub
 		return
 	}
 
-	return "", subtitleBytes, formats.FormatTypeSRT, nil
+	return "", subtitleBytes, subformat.FormatTypeSRT, nil
 }
 
 func LanguageFullForm(s string) string {

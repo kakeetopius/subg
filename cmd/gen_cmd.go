@@ -1,8 +1,8 @@
 package cmd
 
 import (
-	"github.com/kakeetopius/subg/internal/formats"
 	"github.com/kakeetopius/subg/internal/generate"
+	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/spf13/cobra"
 )
 
@@ -22,7 +22,7 @@ func GenCmd() *cobra.Command {
 		Aliases: []string{"g", "gen"},
 		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			subFormat, err := formats.SubFormatFromString(subtitleFormat)
+			subFormat, err := subformat.SubFormatFromString(subtitleFormat)
 			if err != nil {
 				return err
 			}
