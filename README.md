@@ -109,6 +109,7 @@ subg download <query> [flags]
 - `--serie` - Specify that the query is for a TV series
 - `--providers, -p` - The provider(s) to use as a comma-separated list (e.g. `os,sd`). If set, no fallback is done on failure.
 - `--auto` - Automatically select the first result without prompting
+
 </details>
 
 ### generate
@@ -132,6 +133,7 @@ subg generate files... [flags]
 - `--model, -m` - The Whisper model to use: `tiny`, `medium`, `large-v3`, `turbo`, etc. (default: `"turbo"`). See the [model card](https://github.com/openai/whisper/blob/main/model-card.md) for more information.
 - `--hf-token` - A Hugging Face access token to access transcribing models
 - `--verbose` - Print extra information about what is happening
+
 </details>
 
 ### convert
@@ -150,6 +152,7 @@ subg convert --in <input-file> [flags]
 - `--in, -i` - The input subtitle file **(required)**
 - `--out, -o` - The output file name. If not given, the output filename is derived from the input filename.
 - `--convert-to, -c` - The format to convert to. Required if `--out` is not given with a recognizable extension.
+
 </details>
 
 ### login
@@ -166,6 +169,7 @@ subg login --providers <provider> [flags]
 - `--providers, -p` - Provider(s) to authenticate to
 - `--username, -u` - Account username
 - `--password, -P` - Account password
+
 </details>
 
 ## Configuration
@@ -178,18 +182,14 @@ Configuration can be set via:
 
 ### Configuration File
 
-Place a `subg.toml` file in one of these locations:
+Place a `subg.toml` file this location:
 
 **On Linux:**
 
-- `$HOME/subg.toml`
-- `$XDG_CONFIG_HOME/subg.toml` or `~/.config/subg.toml`
 - `$XDG_CONFIG_HOME/subg/subg.toml` or `~/.config/subg/subg.toml`
 
 **On Windows:**
 
-- `%USERPROFILE%\subg.toml`
-- `%APPDATA%\subg.toml`
 - `%APPDATA%\subg\subg.toml`
 
 **Example `subg.toml`:**
@@ -220,6 +220,8 @@ api_key = "subdl_api_key"
 # It can be set here or passed via the --hf-token flag or via the env variable HF_TOKEN
 hf_token = "your-hf-token-here"
 ```
+
+The config file can be also given using the `--config` flag.
 
 ### Environment Variables
 
