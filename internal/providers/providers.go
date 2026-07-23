@@ -3,6 +3,7 @@ package providers
 
 import (
 	"cmp"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -18,25 +19,54 @@ import (
 
 var ErrNextProvider = errors.New("user requested next provider")
 
+// Provider searches for and downloads subtitles from a subtitle service.
 type Provider interface {
+	// Name returns the provider's display name.
 	Name() string
 
-	WithOptions(Options)
+	// SearchSubtitle searches for subtitles matching the supplied options and
+	// caches the results for subsequent operations.
+	SearchSubtitle(ctx context.Context, opts Options) error
 
-	SearchSubtitle() error
+	// PromptSelection presents the cached search results to the user, prompts
+	// them to select one or more subtitles, and returns the selected subtitles.
+	PromptSelection() ([]Subtitle, error)
 
-	DisplaySelections() ([]Subtitle, error)
+	// Download downloads the specified subtitle.
+	Download(ctx context.Context, subtitle Subtitle) (SubtitleFile, error)
 
-	Download(Subtitle) (string, io.ReadCloser, subformat.FormatType, error)
-
-	DownloadBest() (string, io.ReadCloser, subformat.FormatType, error)
+	// DownloadBest automatically selects the best subtitle from the cached
+	// search results according to the provider's selection criteria and
+	// downloads it.
+	DownloadBest(ctx context.Context) (SubtitleFile, error)
 }
 
-type Subtitle any
+// Subtitle represents a provider-specific subtitle search result.
+type Subtitle interface {
+	IsSub() // just a marker
+}
 
+// SubtitleFile represents the contents of a downloaded subtitle.
+type SubtitleFile struct {
+	// Name is the suggested filename of the subtitle. Can be empty
+	Name string
+
+	// Type identifies the subtitle format.
+	Type subformat.FormatType
+
+	// ReadCloser provides access to the subtitle contents.
+	io.ReadCloser
+}
+
+// ProviderSet coordinates searches and downloads across one or more subtitle providers.
 type ProviderSet struct {
-	providers       []Provider
-	options         Options
+	// providers is the set of registered subtitle providers.
+	providers []Provider
+
+	// options are the search options supplied for the current operation.
+	options Options
+
+	// subtitleQueries are the subtitles to search for
 	subtitleQueries []string
 }
 
@@ -60,8 +90,8 @@ type Options struct {
 	AutoSelect     bool
 }
 
-func NewProviderSet(subtitleQueries []string) ProviderSet {
-	return ProviderSet{
+func NewProviderSet(subtitleQueries []string) *ProviderSet {
+	return &ProviderSet{
 		subtitleQueries: subtitleQueries,
 		providers:       make([]Provider, 0, 5),
 	}
@@ -77,6 +107,11 @@ func (set *ProviderSet) WithOptions(options Options) *ProviderSet {
 
 func (set *ProviderSet) Append(provider ...Provider) *ProviderSet {
 	set.providers = append(set.providers, provider...)
+	return set
+}
+
+func (set *ProviderSet) AppendQuery(subtitleQueries ...string) *ProviderSet {
+	set.subtitleQueries = append(set.subtitleQueries, subtitleQueries...)
 	return set
 }
 
@@ -107,33 +142,34 @@ outer:
 }
 
 func (set *ProviderSet) searchSubtitleWithProvider(provider Provider) error {
-	provider.WithOptions(set.options)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	err := provider.SearchSubtitle()
+	err := provider.SearchSubtitle(ctx, set.options)
 	if err != nil {
 		return err
 	}
 
 	if set.options.AutoSelect {
-		name, subBytes, downloadedFormat, dlErr := provider.DownloadBest()
+		subFile, dlErr := provider.DownloadBest(ctx)
 		if dlErr != nil {
 			return dlErr
 		}
-		return set.saveSubtitle(name, subBytes, downloadedFormat)
+		return set.saveSubtitle(&subFile)
 	}
 
-	selected, err := provider.DisplaySelections()
+	selected, err := provider.PromptSelection()
 	if err != nil {
 		return err
 	}
 
 	for _, sub := range selected {
-		name, subBytes, downloadedFormat, err := provider.Download(sub)
+		subFile, err := provider.Download(ctx, sub)
 		if err != nil {
 			return err
 		}
 
-		err = set.saveSubtitle(name, subBytes, downloadedFormat)
+		err = set.saveSubtitle(&subFile)
 		if err != nil {
 			return err
 		}
@@ -142,10 +178,10 @@ func (set *ProviderSet) searchSubtitleWithProvider(provider Provider) error {
 	return nil
 }
 
-func (set *ProviderSet) saveSubtitle(name string, subBytes io.ReadCloser, format subformat.FormatType) error {
-	defer subBytes.Close()
+func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile) error {
+	defer subFile.Close()
 
-	subFormatter, err := subformat.NewSubFormatter(format, subBytes)
+	subFormatter, err := subformat.NewSubFormatter(subFile.Type, subFile)
 	if err != nil {
 		return err
 	}
@@ -154,7 +190,7 @@ func (set *ProviderSet) saveSubtitle(name string, subBytes io.ReadCloser, format
 	if opts.OutputFile != "" {
 		outFileName = util.StripExtension(opts.OutputFile)
 	} else {
-		outFileName = cmp.Or(name, opts.defaultOutputFileName())
+		outFileName = cmp.Or(subFile.Name, opts.defaultOutputFileName())
 	}
 
 	outFileName = subformat.AddExtensionToSubFile(outFileName, opts.SubtitleFormat)

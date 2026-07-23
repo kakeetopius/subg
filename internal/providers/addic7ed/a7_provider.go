@@ -1,18 +1,15 @@
 package addic7ed
 
 import (
+	"context"
 	"fmt"
-	"io"
 
 	"charm.land/bubbles/v2/table"
 	"github.com/kakeetopius/subg/internal/providers"
-	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/ui"
 )
 
 type Addic7ed struct {
-	opts providers.Options
-
 	subtitles []A7Subtitle
 }
 
@@ -20,58 +17,64 @@ func NewProvider() *Addic7ed {
 	return new(Addic7ed)
 }
 
+func (s A7Subtitle) IsSub() {}
+
 func (p *Addic7ed) Name() string {
 	return "addic7ed"
 }
 
-func (p *Addic7ed) WithOptions(opts providers.Options) {
-	p.opts = opts
-}
-
-func (p *Addic7ed) SearchSubtitle() error {
-	subs, err := searchSubtitle(p.opts)
+func (p *Addic7ed) SearchSubtitle(ctx context.Context, opts providers.Options) error {
+	subs, err := searchSubtitle(opts)
 	if err != nil {
 		return err
 	}
 	if len(subs) == 0 {
-		if p.opts.IsSerie {
-			return fmt.Errorf("no results returned for %v Season %v Episode %v", p.opts.Query, p.opts.Season, p.opts.Episode)
+		if opts.IsSerie {
+			return fmt.Errorf("no results returned for %v Season %v Episode %v", opts.Query, opts.Season, opts.Episode)
 		}
-		return fmt.Errorf("no Results returned for %v", p.opts.Query)
+		return fmt.Errorf("no Results returned for %v", opts.Query)
 	}
 	p.subtitles = subs
 	return nil
 }
 
-func (p *Addic7ed) Download(sub providers.Subtitle) (string, io.ReadCloser, subformat.FormatType, error) {
+func (p *Addic7ed) Download(ctx context.Context, sub providers.Subtitle) (providers.SubtitleFile, error) {
 	subtitle := sub.(A7Subtitle)
-	return downloadSubtitle(&subtitle, p.opts)
+	return downloadSubtitle(ctx, &subtitle)
 }
 
-func (p *Addic7ed) DownloadBest() (string, io.ReadCloser, subformat.FormatType, error) {
-	return downloadSubtitle(&p.subtitles[0], p.opts)
+func (p *Addic7ed) DownloadBest(ctx context.Context) (providers.SubtitleFile, error) {
+	return downloadSubtitle(ctx, &p.subtitles[0])
 }
 
-func (p *Addic7ed) DisplaySelections() ([]providers.Subtitle, error) {
+func (p *Addic7ed) PromptSelection() ([]providers.Subtitle, error) {
 	if len(p.subtitles) == 0 {
 		return nil, fmt.Errorf("no subtitles returned by addic7ed")
 	}
 
+	maxNameWidth := 70
 	columns := []table.Column{
 		{Title: "ID", Width: 5},
-		{Title: "Name", Width: len(p.opts.Query)},
+		{Title: "Name", Width: maxNameWidth},
 		{Title: "Lang", Width: 10},
 		{Title: "Version", Width: 10},
 	}
 
 	rows := []table.Row{}
+	maxNameLen := 0
 	for _, sub := range p.subtitles {
+		if len(sub.Name) > maxNameLen {
+			maxNameLen = len(sub.Name)
+		}
 		rows = append(rows, []string{
 			fmt.Sprint(sub.ID),
-			p.opts.Query,
+			sub.Name,
 			sub.Language,
 			sub.Version,
 		})
+	}
+	if maxNameLen < maxNameWidth {
+		columns[1].Width = maxNameLen
 	}
 
 	subID, err := ui.DisplayTableAndGetSubtitleID(rows, columns)

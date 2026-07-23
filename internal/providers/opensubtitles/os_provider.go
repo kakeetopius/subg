@@ -1,24 +1,17 @@
 package opensubtitles
 
 import (
+	"context"
 	"fmt"
-	"io"
 
 	"charm.land/bubbles/v2/table"
 	"github.com/kakeetopius/subg/internal/providers"
-	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/ui"
 )
 
 type OpenSubtitles struct {
-	opts options
-
-	subtitles []OSSubtitle
-}
-
-type options struct {
-	providers.Options
 	OSOptions
+	subtitles []OSSubtitle
 }
 
 type OSOptions struct {
@@ -26,11 +19,11 @@ type OSOptions struct {
 	CacheDir string
 }
 
+func (OSSubtitle) IsSub() {}
+
 func NewProvider(opts OSOptions) *OpenSubtitles {
 	return &OpenSubtitles{
-		opts: options{
-			OSOptions: opts,
-		},
+		OSOptions: opts,
 	}
 }
 
@@ -38,7 +31,7 @@ func (p *OpenSubtitles) Name() string {
 	return "opensubtitles"
 }
 
-func (p *OpenSubtitles) WithOptions(opts providers.Options) {
+func (p *OpenSubtitles) SearchSubtitle(ctx context.Context, opts providers.Options) error {
 	featureType := "all"
 	switch {
 	case opts.IsMovie:
@@ -47,36 +40,32 @@ func (p *OpenSubtitles) WithOptions(opts providers.Options) {
 		// if a season or episode is given we assume it is a serie
 		featureType = "episode"
 	}
-
 	opts.Type = featureType
-	p.opts.Options = opts
-}
 
-func (p *OpenSubtitles) SearchSubtitle() error {
-	subs, err := searchSubtitle(p.opts)
+	subs, err := p.searchSubtitle(opts)
 	if err != nil {
 		return err
 	}
 	if len(subs) == 0 {
-		if p.opts.IsSerie {
-			return fmt.Errorf("no results returned for %v Season %v Episode %v", p.opts.Query, p.opts.Season, p.opts.Episode)
+		if opts.IsSerie {
+			return fmt.Errorf("no results returned for %v Season %v Episode %v", opts.Query, opts.Season, opts.Episode)
 		}
-		return fmt.Errorf("no Results returned for %v", p.opts.Query)
+		return fmt.Errorf("no Results returned for %v", opts.Query)
 	}
 	p.subtitles = subs
 	return nil
 }
 
-func (p *OpenSubtitles) Download(sub providers.Subtitle) (string, io.ReadCloser, subformat.FormatType, error) {
+func (p *OpenSubtitles) Download(ctx context.Context, sub providers.Subtitle) (providers.SubtitleFile, error) {
 	subtitle := sub.(OSSubtitle)
-	return downloadSubtitle(p.opts, &subtitle)
+	return p.downloadSubtitle(ctx, &subtitle)
 }
 
-func (p *OpenSubtitles) DownloadBest() (string, io.ReadCloser, subformat.FormatType, error) {
-	return downloadSubtitle(p.opts, &p.subtitles[0])
+func (p *OpenSubtitles) DownloadBest(ctx context.Context) (providers.SubtitleFile, error) {
+	return p.downloadSubtitle(ctx, &p.subtitles[0])
 }
 
-func (p *OpenSubtitles) DisplaySelections() ([]providers.Subtitle, error) {
+func (p *OpenSubtitles) PromptSelection() ([]providers.Subtitle, error) {
 	if len(p.subtitles) < 1 {
 		return nil, fmt.Errorf("opensubtitles did not return any results")
 	}

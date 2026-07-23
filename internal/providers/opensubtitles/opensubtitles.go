@@ -6,13 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"path"
 	"time"
 
 	"github.com/angelospk/opensubtitles-go"
+	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
@@ -108,14 +108,14 @@ func Login(opts LoginOptions) (err error) {
 	return nil
 }
 
-func searchSubtitle(opts options) ([]OSSubtitle, error) {
-	if opts.APIKey == "" {
+func (p *OpenSubtitles) searchSubtitle(opts providers.Options) ([]OSSubtitle, error) {
+	if p.APIKey == "" {
 		return nil, fmt.Errorf("API Key is required to download from opensubtitles")
 	}
 
 	// To search from opensubtitles the user only needs an api key no need for login
 	client, err := opensubtitles.NewClient(opensubtitles.Config{
-		ApiKey:    opts.APIKey,
+		ApiKey:    p.APIKey,
 		UserAgent: "",
 	})
 	if err != nil {
@@ -214,9 +214,9 @@ func newClientFromCachedConfigs(apiKey string, cacheDir string) (*opensubtitles.
 	return client, nil
 }
 
-func downloadSubtitle(opts options, subtitle *OSSubtitle) (name string, sub io.ReadCloser, format subformat.FormatType, err error) {
+func (p *OpenSubtitles) downloadSubtitle(ctx context.Context, subtitle *OSSubtitle) (subtitleFile providers.SubtitleFile, err error) {
 	// To download from opensubtitles the user must have already logged in a session info cached.
-	client, err := newClientFromCachedConfigs(opts.APIKey, opts.CacheDir)
+	client, err := newClientFromCachedConfigs(p.APIKey, p.CacheDir)
 	if err != nil {
 		return
 	}
@@ -253,5 +253,9 @@ func downloadSubtitle(opts options, subtitle *OSSubtitle) (name string, sub io.R
 		return
 	}
 
-	return file2Download.FileName, resp.Body, subformat.FormatTypeSRT, nil
+	return providers.SubtitleFile{
+		Name:       file2Download.FileName,
+		Type:       subformat.FormatTypeSRT,
+		ReadCloser: resp.Body,
+	}, nil
 }

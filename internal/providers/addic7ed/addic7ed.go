@@ -2,8 +2,8 @@
 package addic7ed
 
 import (
+	"context"
 	"fmt"
-	"io"
 
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/subformat"
@@ -13,6 +13,7 @@ import (
 
 type A7Subtitle struct {
 	ID       int
+	Name     string
 	Language string
 	Version  string
 	Link     string
@@ -48,6 +49,7 @@ func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 	for _, sub := range show.Subtitles {
 		subtitles = append(subtitles, A7Subtitle{
 			ID:       id,
+			Name:     opts.Query,
 			Language: sub.Language,
 			Version:  sub.Version,
 			Link:     sub.Link,
@@ -59,9 +61,9 @@ func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 	return subtitles, nil
 }
 
-func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (name string, subBytes io.ReadCloser, format subformat.FormatType, err error) {
+func downloadSubtitle(ctx context.Context, sub *A7Subtitle) (subtitleFile providers.SubtitleFile, err error) {
 	subtitle := addic7ed.Subtitle{
-		Language: opts.Language,
+		Language: sub.Language,
 		Version:  sub.Version,
 		Link:     sub.Link,
 	}
@@ -81,7 +83,10 @@ func downloadSubtitle(sub *A7Subtitle, opts providers.Options) (name string, sub
 		return
 	}
 
-	return "", subtitleBytes, subformat.FormatTypeSRT, nil
+	return providers.SubtitleFile{
+		Type:       subformat.FormatTypeSRT,
+		ReadCloser: subtitleBytes,
+	}, nil
 }
 
 func LanguageFullForm(s string) string {

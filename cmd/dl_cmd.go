@@ -93,7 +93,7 @@ The following is the list of supported providers so far in order of priority.
 			}
 
 			if len(providersToUse) == 0 {
-				addAllProvidersToSet(&providerSet)
+				addAllProvidersToSet(providerSet)
 			}
 
 			return providerSet.StartSearchAndDownload()

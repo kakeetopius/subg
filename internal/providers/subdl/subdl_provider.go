@@ -1,23 +1,16 @@
 package subdl
 
 import (
+	"context"
 	"fmt"
-	"io"
 
 	"charm.land/bubbles/v2/table"
 	"github.com/kakeetopius/subg/internal/providers"
-	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/ui"
 )
 
 type SubDL struct {
-	opts options
-
 	subtitles []SDSubtitle
-}
-
-type options struct {
-	providers.Options
 	SubDLOpts
 }
 
@@ -25,11 +18,11 @@ type SubDLOpts struct {
 	APIKey string
 }
 
+func (s SDSubtitle) IsSub() {}
+
 func NewProvider(opts SubDLOpts) *SubDL {
 	return &SubDL{
-		opts: options{
-			SubDLOpts: opts,
-		},
+		SubDLOpts: opts,
 	}
 }
 
@@ -37,44 +30,40 @@ func (p *SubDL) Name() string {
 	return "subdl.com"
 }
 
-func (p *SubDL) WithOptions(opts providers.Options) {
+func (p *SubDL) SearchSubtitle(ctx context.Context, searchOpts providers.Options) error {
 	// keyword "movie" or "tv" is what is required by the subdl API.
 	featureType := "movie"
-	if p.opts.IsSerie || p.opts.Episode != 0 || p.opts.Season != 0 {
+	if searchOpts.IsSerie || searchOpts.Episode != 0 || searchOpts.Season != 0 {
 		// if a season or episode is given we assume it is a serie
 		featureType = "tv"
 	}
-	p.opts.Type = featureType
+	searchOpts.Type = featureType
 
-	p.opts.Options = opts
-}
-
-func (p *SubDL) SearchSubtitle() error {
-	subs, err := searchSubtitles(p.opts)
+	subs, err := p.searchSubtitles(searchOpts)
 	if err != nil {
 		return err
 	}
 
 	if len(subs) == 0 {
-		if p.opts.IsSerie {
-			return fmt.Errorf("no results returned for %v Season %v Episode %v", p.opts.Query, p.opts.Season, p.opts.Episode)
+		if searchOpts.IsSerie {
+			return fmt.Errorf("no results returned for %v Season %v Episode %v", searchOpts.Query, searchOpts.Season, searchOpts.Episode)
 		}
-		return fmt.Errorf("no Results returned for %v", p.opts.Query)
+		return fmt.Errorf("no Results returned for %v", searchOpts.Query)
 	}
 	p.subtitles = subs
 	return nil
 }
 
-func (p *SubDL) Download(sub providers.Subtitle) (string, io.ReadCloser, subformat.FormatType, error) {
+func (p *SubDL) Download(ctx context.Context, sub providers.Subtitle) (providers.SubtitleFile, error) {
 	subtitle := sub.(SDSubtitle)
-	return downloadSubtitle(&subtitle)
+	return downloadSubtitle(ctx, &subtitle)
 }
 
-func (p *SubDL) DownloadBest() (string, io.ReadCloser, subformat.FormatType, error) {
-	return downloadSubtitle(&p.subtitles[0])
+func (p *SubDL) DownloadBest(ctx context.Context) (providers.SubtitleFile, error) {
+	return downloadSubtitle(ctx, &p.subtitles[0])
 }
 
-func (p *SubDL) DisplaySelections() ([]providers.Subtitle, error) {
+func (p *SubDL) PromptSelection() ([]providers.Subtitle, error) {
 	if len(p.subtitles) == 0 {
 		return nil, fmt.Errorf("no subtitles returned by subdl")
 	}

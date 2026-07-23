@@ -3,44 +3,44 @@ package subdl
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 
+	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/kakeetopius/subg/internal/zip"
 	"github.com/pterm/pterm"
 )
 
-func searchSubtitles(opts options) ([]SDSubtitle, error) {
-	if opts.APIKey == "" {
+func (p *SubDL) searchSubtitles(searchOptions providers.Options) ([]SDSubtitle, error) {
+	if p.APIKey == "" {
 		return nil, fmt.Errorf(" An API Key is required to use subdl.com")
 	}
 	c, err := NewClient(Config{
-		APIKey: opts.APIKey,
+		APIKey: p.APIKey,
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	searchParams := SearchParams{}
-	searchParams.Query = &opts.Query
-	searchParams.APIKey = opts.APIKey
+	searchParams.Query = &searchOptions.Query
+	searchParams.APIKey = p.APIKey
 
-	if opts.Season != 0 {
-		searchParams.SeasonNumber = &opts.Season
+	if searchOptions.Season != 0 {
+		searchParams.SeasonNumber = &searchOptions.Season
 	}
-	if opts.Episode != 0 {
-		searchParams.EpisodeNumber = &opts.Episode
+	if searchOptions.Episode != 0 {
+		searchParams.EpisodeNumber = &searchOptions.Episode
 	}
-	if opts.IMDBId != 0 {
-		searchParams.IMDBId = &opts.IMDBId
+	if searchOptions.IMDBId != 0 {
+		searchParams.IMDBId = &searchOptions.IMDBId
 	}
-	if opts.Year != 0 {
-		searchParams.Year = &opts.Year
+	if searchOptions.Year != 0 {
+		searchParams.Year = &searchOptions.Year
 	}
-	if opts.Language != "" {
-		searchParams.Languages = &opts.Language
+	if searchOptions.Language != "" {
+		searchParams.Languages = &searchOptions.Language
 	}
 
 	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on subdl.com.........")
@@ -63,7 +63,7 @@ func searchSubtitles(opts options) ([]SDSubtitle, error) {
 	return results.Subtitles, nil
 }
 
-func downloadSubtitle(subtitle *SDSubtitle) (name string, subBytes io.ReadCloser, format subformat.FormatType, err error) {
+func downloadSubtitle(ctx context.Context, subtitle *SDSubtitle) (subtitleFile providers.SubtitleFile, err error) {
 	if subtitle == nil {
 		err = fmt.Errorf("no subtitle provided for download")
 		return
@@ -91,7 +91,7 @@ func downloadSubtitle(subtitle *SDSubtitle) (name string, subBytes io.ReadCloser
 
 	subFiles, err := zip.SubtitleFilesFromZip(resp.Body)
 	if err != nil {
-		return "", nil, 0, err
+		return
 	}
 	if len(subFiles) == 0 {
 		err = fmt.Errorf("no subtitle files found in the zip file")
@@ -99,14 +99,18 @@ func downloadSubtitle(subtitle *SDSubtitle) (name string, subBytes io.ReadCloser
 	}
 
 	subFile := subFiles[0]
-	format, err = subformat.SubFormatFromFileName(subFile.Name)
+	format, err := subformat.SubFormatFromFileName(subFile.Name)
 	if err != nil {
-		return "", nil, 0, err
+		return
 	}
-	subBytes, err = subFile.Open()
+	subBytes, err := subFile.Open()
 	if err != nil {
-		return "", nil, 0, err
+		return
 	}
 
-	return util.StripExtension(subFile.Name), subBytes, format, nil
+	return providers.SubtitleFile{
+		Name:       util.StripExtension(subFile.Name),
+		Type:       format,
+		ReadCloser: subBytes,
+	}, nil
 }

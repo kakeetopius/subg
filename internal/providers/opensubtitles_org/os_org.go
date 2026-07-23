@@ -2,12 +2,13 @@
 package opensubtitlesorg
 
 import (
+	"context"
 	"fmt"
-	"io"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/sessions"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
@@ -29,12 +30,12 @@ const (
 	sessionTTL       = 5 * time.Hour
 )
 
-func (p *OpenSubtitlesOrg) search(opts Options) ([]OSOrgSubtitle, error) {
+func (p *OpenSubtitlesOrg) search(opts providers.Options) ([]OSOrgSubtitle, error) {
 	mustHaveCookies := []string{anubisCookieName, "cf_clearance"}
 
 	sessionManager := sessions.
 		NewSessionManager().
-		WithCacheDir(opts.CacheDir).
+		WithCacheDir(p.CacheDir).
 		WithSessionTTL(sessionTTL).
 		WithMustHaveCookies(domain, mustHaveCookies...).
 		WithWaitDuration(2 * time.Minute)
@@ -66,7 +67,7 @@ func (p *OpenSubtitlesOrg) search(opts Options) ([]OSOrgSubtitle, error) {
 	return subs, nil
 }
 
-func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name string, subBytes io.ReadCloser, format subformat.FormatType, err error) {
+func (p *OpenSubtitlesOrg) downloadSubtitle(ctx context.Context, subtitle *OSOrgSubtitle) (subtitleFile providers.SubtitleFile, err error) {
 	p.session.Client.WithBaseURL(opensubtitlesDLURL)
 
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
@@ -89,7 +90,7 @@ func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name strin
 
 	subFiles, err := zip.SubtitleFilesFromZip(resp.Body)
 	if err != nil {
-		return "", nil, 0, err
+		return
 	}
 	if len(subFiles) == 0 {
 		err = fmt.Errorf("no subtitle files found in the zip file")
@@ -97,16 +98,20 @@ func (p *OpenSubtitlesOrg) downloadSubtitle(subtitle *OSOrgSubtitle) (name strin
 	}
 
 	subFile := subFiles[0]
-	format, err = subformat.SubFormatFromFileName(subFile.Name)
+	format, err := subformat.SubFormatFromFileName(subFile.Name)
 	if err != nil {
-		return "", nil, 0, err
+		return
 	}
-	subBytes, err = subFile.Open()
+	subBytes, err := subFile.Open()
 	if err != nil {
-		return "", nil, 0, err
+		return
 	}
 
-	return util.StripExtension(subFile.Name), subBytes, format, nil
+	return providers.SubtitleFile{
+		Name:       util.StripExtension(subFile.Name),
+		Type:       format,
+		ReadCloser: subBytes,
+	}, nil
 }
 
 func pathFromID(s string) string {
@@ -168,7 +173,7 @@ func cleanResultsTitle(t string) string {
 	return strings.Join(words, " ")
 }
 
-func encodeParams(baseURL string, opts Options) string {
+func encodeParams(baseURL string, opts providers.Options) string {
 	sb := strings.Builder{}
 
 	filters := make([]string, 0, 10)
