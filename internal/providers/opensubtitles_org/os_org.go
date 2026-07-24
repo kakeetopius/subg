@@ -17,29 +17,17 @@ import (
 )
 
 const (
-	domain            = "www.opensubtitles.org"
-	downloadSubDomain = "dl.opensubtitles.org"
-
+	domain               = "opensubtitles.org"
+	downloadSubDomain    = "dl.opensubtitles.org"
 	openSubtitlesBaseURL = "https://" + domain
 	opensubtitlesDLURL   = "https://" + downloadSubDomain
-
-	searchPath = "/en/search"
-	dlPath     = "/en/download/sub"
-
-	anubisCookieName = "techaro.lol-anubis-auth"
-	sessionTTL       = 5 * time.Hour
+	searchPath           = "/en/search"
+	dlPath               = "/en/download/sub"
+	anubisCookieName     = "techaro.lol-anubis-auth"
+	sessionTTL           = 5 * time.Hour
 )
 
 func (p *OpenSubtitlesOrg) search(opts providers.SearchOptions) ([]providers.Subtitle, error) {
-	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on opensubtitles.org..........")
-	defer func() {
-		if err == nil {
-			spinner.Success("Search Complete")
-		} else {
-			spinner.Fail()
-		}
-	}()
-
 	mustHaveCookies := []string{anubisCookieName, "cf_clearance"}
 
 	sessionManager := sessions.
@@ -55,6 +43,14 @@ func (p *OpenSubtitlesOrg) search(opts providers.SearchOptions) ([]providers.Sub
 	}
 	p.session = session
 
+	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on opensubtitles.org..........")
+	defer func() {
+		if err == nil {
+			spinner.Success("Search Complete")
+		} else {
+			spinner.Fail()
+		}
+	}()
 	resp, err := p.session.DoRequest(context.Background(), encodeParams(searchPath, opts))
 	if err != nil {
 		return nil, err

@@ -18,17 +18,14 @@ import (
 
 type TransciberOptions struct {
 	SubtitleFormat subformat.FormatType
-
-	InputFiles []string
-	OutputDir  string
-	Language   string
-	Translate  bool
-
-	CacheDir string
-	Verbose  bool
-
-	HFToken string
-	Model   string
+	InputFiles     []string
+	OutputDir      string
+	Language       string
+	Translate      bool
+	CacheDir       string
+	Verbose        bool
+	HFToken        string
+	Model          string
 }
 
 const (

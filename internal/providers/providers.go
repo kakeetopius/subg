@@ -88,22 +88,26 @@ type SearchOptions struct {
 	AutoSelect     bool
 }
 
+// NewProviderSet creates a new ProviderSet
 func NewProviderSet() *ProviderSet {
 	return &ProviderSet{
 		providers: make([]Provider, 0, 5),
 	}
 }
 
+// Append adds one or more providers to the ProviderSet and returns the updated set.
 func (set *ProviderSet) Append(provider ...Provider) *ProviderSet {
 	set.providers = append(set.providers, provider...)
 	return set
 }
 
+// AppendQuery adds one or more subtitle search queries to the ProviderSet and returns the updated set.
 func (set *ProviderSet) AppendQuery(query ...SearchOptions) *ProviderSet {
 	set.subtitleQueries = append(set.subtitleQueries, query...)
 	return set
 }
 
+// StartSearchAndDownload starts the search and download process for all subtitle queries in the ProviderSet. It iterates through each query and attempts to find and download subtitles from the registered providers. If a provider returns an error, it will continue to the next provider.
 func (set *ProviderSet) StartSearchAndDownload() error {
 outer:
 	for _, query := range set.subtitleQueries {
@@ -129,6 +133,7 @@ outer:
 	return nil
 }
 
+// searchSubtitleWithProvider searches for subtitles using the specified provider and query parameters.
 func (set *ProviderSet) searchSubtitleWithProvider(provider Provider, queryParams SearchOptions) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -164,6 +169,7 @@ func (set *ProviderSet) searchSubtitleWithProvider(provider Provider, queryParam
 	return nil
 }
 
+// saveSubtitle saves the downloaded subtitle file to the specified output directory and format.
 func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchOptions) error {
 	defer subFile.Close()
 
@@ -202,6 +208,7 @@ func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchO
 	return nil
 }
 
+// defaultOutputFileName returns a default output file name based on the search options. If the search is for a series, it includes the season and episode numbers in the file name.
 func (o *SearchOptions) defaultOutputFileName() string {
 	if o.IsSerie {
 		sb := strings.Builder{}
@@ -218,6 +225,7 @@ func (o *SearchOptions) defaultOutputFileName() string {
 	return o.Query
 }
 
+// promptSelection displays a table of subtitles and prompts the user to select one. It returns the selected subtitle(s) or an error if the selection process fails.
 func promptSelection(columnHeaders []string, subs []Subtitle) ([]Subtitle, error) {
 	columnMaxWidths := make([]int, len(columnHeaders)) // the maximum width for each column
 
@@ -264,6 +272,7 @@ func promptSelection(columnHeaders []string, subs []Subtitle) ([]Subtitle, error
 	return []Subtitle{sub}, nil
 }
 
+// subtitleByID returns the subtitle with the specified ID from the given slice of subtitles.
 func subtitleByID(subs []Subtitle, id string) (Subtitle, error) {
 	for _, sub := range subs {
 		if sub.ID() == id {

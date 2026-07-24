@@ -11,6 +11,8 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
+// DisplayTableAndGetSelectedID displays a table using the provided columns and rows, prompts the user to select a row, and returns the value of the first column of the
+// selected row. The first column is assumed to contain a unique identifier.
 func DisplayTableAndGetSelectedID(rows []table.Row, columns []table.Column) (string, error) {
 	m, err := setUpTable(columns, rows, 0)
 	if err != nil {
@@ -36,9 +38,10 @@ func DisplayTableAndGetSelectedID(rows []table.Row, columns []table.Column) (str
 }
 
 var (
-	ErrUserQuit       = errors.New("user quit")
-	ErrNextProvider   = errors.New("user requested next provider")
-	TableWidthPadding = 5
+	ErrUserQuit        = errors.New("user quit")
+	ErrNextProvider    = errors.New("user requested next provider")
+	TableWidthPadding  = 10
+	TableHeightPadding = 2
 
 	baseStyle = lipgloss.NewStyle().
 			BorderStyle(lipgloss.NormalBorder()).
@@ -102,7 +105,7 @@ func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int) (t
 		return nil, fmt.Errorf("table rows empty")
 	}
 
-	tableHeight := min(len(rows)+2, 10)
+	tableHeight := min(len(rows)+TableHeightPadding, 10)
 	t := table.New(
 		table.WithColumns(columns),
 		table.WithRows(rows),

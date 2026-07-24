@@ -1,8 +1,5 @@
-// Package sessions manages authenticated sessions for HTTP providers.
-// It handles session cookies, authentication tokens, and other state required
-// to make authenticated requests. The package also provides HTTP clients that
-// automatically apply the appropriate session state when communicating with
-// providers.
+// Package sessions manages authenticated sessions for HTTP providers that require it. It handles session cookies, authentication tokens, and other state required
+// to make authenticated requests to the provider.
 package sessions
 
 import (
@@ -74,6 +71,8 @@ func (m *SessionManager) WithMustHaveCookies(domain string, cookieNames ...strin
 	return m
 }
 
+// GetSession returns a session for the specified domain. challengeURL specifies the full URL of the page containing any challenge that must be completed to
+// obtain valid session cookies. If challengeURL is empty, it defaults to "https://<domain>".
 func (m SessionManager) GetSession(domain, challengeURL string, forceRefresh bool) (Session, error) {
 	baseURL := fmt.Sprintf("https://%v", domain)
 	if challengeURL == "" {
@@ -104,6 +103,7 @@ func (m SessionManager) GetSession(domain, challengeURL string, forceRefresh boo
 	return s, nil
 }
 
+// loadSessionFromCachedFile loads the session for the given domain from the cache file. If the session is not found, it returns ErrDomainSessionNotFound.
 func (m SessionManager) loadSessionFromCachedFile(domain string) (Session, error) {
 	path := filepath.Join(m.CacheDir, cachefile)
 
@@ -123,6 +123,7 @@ func (m SessionManager) loadSessionFromCachedFile(domain string) (Session, error
 	return s, nil
 }
 
+// saveSessionToCacheFile saves the session for the given domain to the cache file. If the session for the domain already exists in the cache file, it will be overwritten.
 func (m SessionManager) saveSessionToCacheFile(domain string, s Session) error {
 	path := filepath.Join(m.CacheDir, cachefile)
 
@@ -146,9 +147,9 @@ func (m SessionManager) saveSessionToCacheFile(domain string, s Session) error {
 	return os.WriteFile(path, out, 0o644)
 }
 
-// acquireSession launches a real, to acquire required session information like authentication cookies, user agent etc.
+// acquireSession launches a browser and navigates to the challenge URL, waiting for the required session cookies to be set. It returns a Session object containing the acquired cookies and user agent.
 func (m SessionManager) acquireSession(domain, challengeURL string) (Session, error) {
-	fmt.Println("Browser window opened. Complete any challenges provided if prompted.")
+	fmt.Println("\nBrowser window opened. Complete any challenges provided if prompted.")
 	fmt.Printf("Waiting up to %s for clearance cookies...\n", m.WaitDuration.String())
 
 	browserCtx, cancel := m.startBrowser()
@@ -208,6 +209,7 @@ func (m SessionManager) acquireSession(domain, challengeURL string) (Session, er
 	}, nil
 }
 
+// startBrowser starts a new Chrome browser instance. It returns a context and a cancel function that can be used to stop the browser.
 func (m SessionManager) startBrowser() (context.Context, context.CancelFunc) {
 	opts := append(
 		chromedp.DefaultExecAllocatorOptions[:],
@@ -219,6 +221,7 @@ func (m SessionManager) startBrowser() (context.Context, context.CancelFunc) {
 	return chromedp.NewExecAllocator(context.Background(), opts...)
 }
 
+// goToSiteWithBrowser navigates to the specified URL using the provided browser context. It returns a new context for the tab, a cancel function to close the tab, and an error if navigation fails.
 func (m SessionManager) goToSiteWithBrowser(browserCtx context.Context, url string) (context.Context, context.CancelFunc, error) {
 	ctx, cancel := chromedp.NewContext(browserCtx)
 
@@ -230,6 +233,7 @@ func (m SessionManager) goToSiteWithBrowser(browserCtx context.Context, url stri
 	return ctx, cancel, nil
 }
 
+// validateCookies checks if the required cookies for the given domain are present in the provided list of cookies. If any required cookie is missing, it returns an ErrCookieNotFound error.
 func (m SessionManager) validateCookies(cookies []*network.Cookie, domain string) error {
 	mustHave, found := m.MustHaveCookies[domain]
 	if !found {
@@ -254,6 +258,7 @@ func (m SessionManager) validateCookies(cookies []*network.Cookie, domain string
 	return nil
 }
 
+// fetchCookies retrieves all cookies from the current browser/tab context.
 func (m SessionManager) fetchCookies(ctx context.Context) (cookies []*network.Cookie, err error) {
 	err = chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 		cookies, err = network.GetCookies().Do(ctx)
@@ -263,6 +268,7 @@ func (m SessionManager) fetchCookies(ctx context.Context) (cookies []*network.Co
 	return
 }
 
+// buildCookieString constructs a cookie header string from the provided list of cookies, filtering by the specified domain. It returns a string in the format "name1=value1; name2=value2; ...".
 func (m SessionManager) buildCookieString(cookies []*network.Cookie, domain string) string {
 	var sb strings.Builder
 	for _, c := range cookies {
@@ -279,14 +285,16 @@ func (m SessionManager) buildCookieString(cookies []*network.Cookie, domain stri
 	return sb.String()
 }
 
+// getUserAgent retrieves the user agent string from the current browser/tab context. It returns the user agent string and an error if retrieval fails.
 func (m SessionManager) getUserAgent(ctx context.Context) (string, error) {
 	var ua string
 	err := chromedp.Run(ctx, chromedp.Evaluate(`navigator.userAgent`, &ua))
 	return ua, err
 }
 
+// domainMatches checks if the cookie domain matches the target domain. It returns true if the cookie domain is equal to the target domain or if the cookie domain is a subdomain of the target domain.
 func domainMatches(cookieDomain, target string) bool {
 	cd := strings.TrimPrefix(strings.ToLower(cookieDomain), ".")
 	t := strings.ToLower(target)
-	return cd == t || strings.HasSuffix(t, cd)
+	return cd == t || strings.HasSuffix(cd, t)
 }
