@@ -11,6 +11,7 @@ import (
 	"path"
 	"strings"
 
+	"charm.land/bubbles/v2/table"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/ui"
 	"github.com/kakeetopius/subg/internal/util"
@@ -24,26 +25,26 @@ type Provider interface {
 	// Name returns the provider's display name.
 	Name() string
 
-	// SearchSubtitle searches for subtitles matching the supplied options and
-	// caches the results for subsequent operations.
-	SearchSubtitle(ctx context.Context, opts Options) error
+	// SearchSubtitle searches for subtitles matching the supplied options and returns the matching subtitles.
+	SearchSubtitle(ctx context.Context, opts SearchOptions) ([]Subtitle, error)
 
-	// PromptSelection presents the cached search results to the user, prompts
-	// them to select one or more subtitles, and returns the selected subtitles.
-	PromptSelection() ([]Subtitle, error)
+	// SelectBest selects the best subtitle from the given search results according to the provider's selection criteria.
+	SelectBest([]Subtitle) Subtitle
 
-	// Download downloads the specified subtitle.
+	// Download downloads the given subtitle and returns its contents.
 	Download(ctx context.Context, subtitle Subtitle) (SubtitleFile, error)
 
-	// DownloadBest automatically selects the best subtitle from the cached
-	// search results according to the provider's selection criteria and
-	// downloads it.
-	DownloadBest(ctx context.Context) (SubtitleFile, error)
+	// SubtitleHeaders returns the column headers used to display subtitle search results in a table. The first column should be a unique subtitle identifier
+	SubtitleHeaders() []string
 }
 
 // Subtitle represents a provider-specific subtitle search result.
 type Subtitle interface {
-	IsSub() // just a marker
+	// ID returns the unique identifier of the subtitle.
+	ID() string
+
+	// Fields returns the values for this subtitle, in the same order as the headers returned by Provider.SubtitleHeaders().
+	Fields() []string
 }
 
 // SubtitleFile represents the contents of a downloaded subtitle.
@@ -63,15 +64,12 @@ type ProviderSet struct {
 	// providers is the set of registered subtitle providers.
 	providers []Provider
 
-	// options are the search options supplied for the current operation.
-	options Options
-
 	// subtitleQueries are the subtitles to search for
-	subtitleQueries []string
+	subtitleQueries []SearchOptions
 }
 
-// Options are the general options for searching and downloading subtitles.
-type Options struct {
+// SearchOptions are the general options for searching and downloading subtitles.
+type SearchOptions struct {
 	// Search Options
 	Query    string
 	IMDBId   int
@@ -90,19 +88,10 @@ type Options struct {
 	AutoSelect     bool
 }
 
-func NewProviderSet(subtitleQueries []string) *ProviderSet {
+func NewProviderSet() *ProviderSet {
 	return &ProviderSet{
-		subtitleQueries: subtitleQueries,
-		providers:       make([]Provider, 0, 5),
+		providers: make([]Provider, 0, 5),
 	}
-}
-
-func (set *ProviderSet) WithOptions(options Options) *ProviderSet {
-	if options.Season != 0 || options.Episode != 0 {
-		options.IsSerie = true
-	}
-	set.options = options
-	return set
 }
 
 func (set *ProviderSet) Append(provider ...Provider) *ProviderSet {
@@ -110,8 +99,8 @@ func (set *ProviderSet) Append(provider ...Provider) *ProviderSet {
 	return set
 }
 
-func (set *ProviderSet) AppendQuery(subtitleQueries ...string) *ProviderSet {
-	set.subtitleQueries = append(set.subtitleQueries, subtitleQueries...)
+func (set *ProviderSet) AppendQuery(query ...SearchOptions) *ProviderSet {
+	set.subtitleQueries = append(set.subtitleQueries, query...)
 	return set
 }
 
@@ -119,12 +108,11 @@ func (set *ProviderSet) StartSearchAndDownload() error {
 outer:
 	for _, query := range set.subtitleQueries {
 		fmt.Println()
-		set.options.Query = query
-		pterm.Info.Printf("Searching Subtitles for: %s\n", set.options.defaultOutputFileName())
+		pterm.Info.Printf("Searching Subtitles for: %s\n", query.defaultOutputFileName())
 		for _, provider := range set.providers {
 			pterm.Info.Printf("Trying provider: %s\n", provider.Name())
 
-			err := set.searchSubtitleWithProvider(provider)
+			err := set.searchSubtitleWithProvider(provider, query)
 			if err != nil {
 				if errors.Is(err, ui.ErrUserQuit) {
 					return nil
@@ -141,35 +129,33 @@ outer:
 	return nil
 }
 
-func (set *ProviderSet) searchSubtitleWithProvider(provider Provider) error {
+func (set *ProviderSet) searchSubtitleWithProvider(provider Provider, queryParams SearchOptions) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err := provider.SearchSubtitle(ctx, set.options)
+	subs, err := provider.SearchSubtitle(ctx, queryParams)
 	if err != nil {
 		return err
 	}
 
-	if set.options.AutoSelect {
-		subFile, dlErr := provider.DownloadBest(ctx)
-		if dlErr != nil {
-			return dlErr
+	todownload := make([]Subtitle, 0, 5)
+	if queryParams.AutoSelect {
+		todownload = append(todownload, provider.SelectBest(subs))
+	} else {
+		selected, err := promptSelection(provider.SubtitleHeaders(), subs)
+		if err != nil {
+			return err
 		}
-		return set.saveSubtitle(&subFile)
+		todownload = append(todownload, selected...)
 	}
 
-	selected, err := provider.PromptSelection()
-	if err != nil {
-		return err
-	}
-
-	for _, sub := range selected {
+	for _, sub := range todownload {
 		subFile, err := provider.Download(ctx, sub)
 		if err != nil {
 			return err
 		}
 
-		err = set.saveSubtitle(&subFile)
+		err = set.saveSubtitle(&subFile, &queryParams)
 		if err != nil {
 			return err
 		}
@@ -178,26 +164,25 @@ func (set *ProviderSet) searchSubtitleWithProvider(provider Provider) error {
 	return nil
 }
 
-func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile) error {
+func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchOptions) error {
 	defer subFile.Close()
 
 	subFormatter, err := subformat.NewSubFormatter(subFile.Type, subFile)
 	if err != nil {
 		return err
 	}
-	opts := set.options
 	var outFileName string
-	if opts.OutputFile != "" {
-		outFileName = util.StripExtension(opts.OutputFile)
+	if queryParams.OutputFile != "" {
+		outFileName = util.StripExtension(queryParams.OutputFile)
 	} else {
-		outFileName = cmp.Or(subFile.Name, opts.defaultOutputFileName())
+		outFileName = cmp.Or(subFile.Name, queryParams.defaultOutputFileName())
 	}
 
-	outFileName = subformat.AddExtensionToSubFile(outFileName, opts.SubtitleFormat)
-	outFileName = path.Join(opts.OutputDir, outFileName)
+	outFileName = subformat.AddExtensionToSubFile(outFileName, queryParams.SubtitleFormat)
+	outFileName = path.Join(queryParams.OutputDir, outFileName)
 
-	if opts.OutputDir != "" {
-		err = util.CreateDirIfNotExists(opts.OutputDir)
+	if queryParams.OutputDir != "" {
+		err = util.CreateDirIfNotExists(queryParams.OutputDir)
 		if err != nil {
 			return err
 		}
@@ -209,7 +194,7 @@ func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile) error {
 	}
 	defer outFile.Close()
 
-	err = subFormatter.ConvertToAndWrite(opts.SubtitleFormat, outFile)
+	err = subFormatter.ConvertToAndWrite(queryParams.SubtitleFormat, outFile)
 	if err != nil {
 		return err
 	}
@@ -217,7 +202,7 @@ func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile) error {
 	return nil
 }
 
-func (o *Options) defaultOutputFileName() string {
+func (o *SearchOptions) defaultOutputFileName() string {
 	if o.IsSerie {
 		sb := strings.Builder{}
 		sb.WriteString(o.Query)
@@ -231,4 +216,60 @@ func (o *Options) defaultOutputFileName() string {
 	}
 
 	return o.Query
+}
+
+func promptSelection(columnHeaders []string, subs []Subtitle) ([]Subtitle, error) {
+	columnMaxWidths := make([]int, len(columnHeaders)) // the maximum width for each column
+
+	rows := []table.Row{}
+	for _, sub := range subs {
+		fields := sub.Fields()
+		if len(fields) != len(columnHeaders) {
+			return nil, fmt.Errorf("invalid number of fields returned by subtitle of ID: %s. Wanted %v (len %d). Got %v (len %d)", sub.ID(), columnHeaders, len(columnHeaders), fields, len(fields))
+		}
+
+		row := make([]string, 0, len(fields))
+		for i, field := range fields {
+			if len(field) > columnMaxWidths[i] {
+				columnMaxWidths[i] = len(field)
+			}
+			row = append(row, field)
+		}
+
+		rows = append(rows, row)
+	}
+
+	columns := make([]table.Column, 0, len(columnHeaders))
+	for i, header := range columnHeaders {
+		if len(header) > columnMaxWidths[i] {
+			columnMaxWidths[i] = len(header)
+		}
+
+		columns = append(columns, table.Column{
+			Title: header,
+			Width: columnMaxWidths[i],
+		})
+	}
+
+	subID, err := ui.DisplayTableAndGetSelectedID(rows, columns)
+	if err != nil {
+		return nil, err
+	}
+
+	sub, err := subtitleByID(subs, subID)
+	if err != nil {
+		return nil, err
+	}
+
+	return []Subtitle{sub}, nil
+}
+
+func subtitleByID(subs []Subtitle, id string) (Subtitle, error) {
+	for _, sub := range subs {
+		if sub.ID() == id {
+			return sub, nil
+		}
+	}
+
+	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
 }

@@ -12,14 +12,14 @@ import (
 )
 
 type A7Subtitle struct {
-	ID       int
+	SubID    int
 	Name     string
 	Language string
 	Version  string
 	Link     string
 }
 
-func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
+func searchSubtitle(opts providers.SearchOptions) ([]providers.Subtitle, error) {
 	client := addic7ed.New()
 
 	showName := opts.Query
@@ -30,25 +30,30 @@ func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 
 	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on addic7ed.com..........")
 	if err != nil {
-		spinner.Fail()
 		return nil, err
 	}
+	defer func() {
+		if err == nil {
+			spinner.Success("Search Complete")
+		} else {
+			spinner.Fail()
+		}
+	}()
 
 	show, err := client.SearchAll(showName)
 	if err != nil {
-		spinner.Fail()
 		return nil, err
 	}
 	if opts.Language != "" {
 		show.Subtitles = show.Subtitles.Filter(addic7ed.WithLanguage(LanguageFullForm(opts.Language)))
 	}
 
-	subtitles := make([]A7Subtitle, 0, len(show.Subtitles))
+	subtitles := make([]providers.Subtitle, 0, len(show.Subtitles))
 
 	id := 1000
 	for _, sub := range show.Subtitles {
 		subtitles = append(subtitles, A7Subtitle{
-			ID:       id,
+			SubID:    id,
 			Name:     opts.Query,
 			Language: sub.Language,
 			Version:  sub.Version,
@@ -57,7 +62,6 @@ func searchSubtitle(opts providers.Options) ([]A7Subtitle, error) {
 		id++
 	}
 
-	spinner.Success("Search Done")
 	return subtitles, nil
 }
 
@@ -73,7 +77,9 @@ func downloadSubtitle(ctx context.Context, sub *A7Subtitle) (subtitleFile provid
 		return
 	}
 	defer func() {
-		if err != nil {
+		if err == nil {
+			spinner.Success("Download Complete")
+		} else {
 			spinner.Fail()
 		}
 	}()

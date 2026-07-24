@@ -29,8 +29,8 @@ func (s *Session) initSessionHTTPClient(baseURL string) {
 	s.Client = httpclient.New().WithBaseURL(baseURL).WithUserAgent(s.UserAgent).WithCookie(s.CookieHeader)
 }
 
-func (s Session) DoRequest(path string) (*http.Response, error) {
-	return s.Client.Get(context.Background(), path, nil)
+func (s Session) DoRequest(ctx context.Context, path string) (*http.Response, error) {
+	return s.Client.Get(ctx, path, nil)
 }
 
 func (s Session) DoRequestWithBrowser(path string) (*http.Response, error) {

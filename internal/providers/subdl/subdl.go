@@ -12,7 +12,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-func (p *SubDL) searchSubtitles(searchOptions providers.Options) ([]SDSubtitle, error) {
+func (p *SubDL) searchSubtitles(searchOptions providers.SearchOptions) ([]providers.Subtitle, error) {
 	if p.APIKey == "" {
 		return nil, fmt.Errorf(" An API Key is required to use subdl.com")
 	}
@@ -47,20 +47,28 @@ func (p *SubDL) searchSubtitles(searchOptions providers.Options) ([]SDSubtitle, 
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err == nil {
+			spinner.Success("Search Complete")
+		} else {
+			spinner.Fail()
+		}
+	}()
+
 	results, err := c.SearchSubtitles(context.Background(), searchParams)
 	if err != nil {
-		spinner.Fail()
 		return nil, err
 	}
 
 	id := 1000
-	for i := range results.Subtitles {
-		results.Subtitles[i].ID = id
+	subs := make([]providers.Subtitle, 0, len(results.Subtitles))
+	for _, sub := range results.Subtitles {
+		sub.SubID = id
+		subs = append(subs, sub)
 		id++
 	}
 
-	spinner.Success("Search Done")
-	return results.Subtitles, nil
+	return subs, nil
 }
 
 func downloadSubtitle(ctx context.Context, subtitle *SDSubtitle) (subtitleFile providers.SubtitleFile, err error) {

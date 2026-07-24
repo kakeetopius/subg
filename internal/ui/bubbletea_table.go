@@ -11,13 +11,39 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-var ErrUserQuit = errors.New("user quit")
+func DisplayTableAndGetSelectedID(rows []table.Row, columns []table.Column) (string, error) {
+	m, err := setUpTable(columns, rows, 0)
+	if err != nil {
+		return "", err
+	}
+	returnedModel, err := tea.NewProgram(m).Run()
+	if err != nil {
+		return "", err
+	}
 
-var ErrNextProvider = errors.New("user requested next provider")
+	finalModel, ok := returnedModel.(model)
+	if !ok {
+		return "", fmt.Errorf("could not get selected item")
+	}
+	if finalModel.userQuit {
+		return "", ErrUserQuit
+	}
+	if finalModel.nextProvider {
+		return "", ErrNextProvider
+	}
 
-var baseStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
+	return finalModel.selectedRowID, nil
+}
+
+var (
+	ErrUserQuit       = errors.New("user quit")
+	ErrNextProvider   = errors.New("user requested next provider")
+	TableWidthPadding = 5
+
+	baseStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("240"))
+)
 
 type model struct {
 	table table.Model
@@ -82,7 +108,7 @@ func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int) (t
 		table.WithRows(rows),
 		table.WithFocused(true),
 		table.WithHeight(tableHeight),
-		table.WithWidth(tableWidth(columns)),
+		table.WithWidth(tableWidth(columns)+TableWidthPadding),
 	)
 
 	s := table.DefaultStyles()
@@ -98,7 +124,7 @@ func setUpTable(columns []table.Column, rows []table.Row, idenifierIndex int) (t
 	t.SetStyles(s)
 
 	if idenifierIndex >= len(rows[0]) {
-		return nil, fmt.Errorf("invalid identifier index")
+		return nil, fmt.Errorf("invalid table identifier index")
 	}
 
 	m := model{

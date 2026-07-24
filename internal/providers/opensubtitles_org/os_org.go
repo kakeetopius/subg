@@ -30,7 +30,16 @@ const (
 	sessionTTL       = 5 * time.Hour
 )
 
-func (p *OpenSubtitlesOrg) search(opts providers.Options) ([]OSOrgSubtitle, error) {
+func (p *OpenSubtitlesOrg) search(opts providers.SearchOptions) ([]providers.Subtitle, error) {
+	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on opensubtitles.org..........")
+	defer func() {
+		if err == nil {
+			spinner.Success("Search Complete")
+		} else {
+			spinner.Fail()
+		}
+	}()
+
 	mustHaveCookies := []string{anubisCookieName, "cf_clearance"}
 
 	sessionManager := sessions.
@@ -46,7 +55,7 @@ func (p *OpenSubtitlesOrg) search(opts providers.Options) ([]OSOrgSubtitle, erro
 	}
 	p.session = session
 
-	resp, err := p.session.DoRequest(encodeParams(searchPath, opts))
+	resp, err := p.session.DoRequest(context.Background(), encodeParams(searchPath, opts))
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +91,7 @@ func (p *OpenSubtitlesOrg) downloadSubtitle(ctx context.Context, subtitle *OSOrg
 		}
 	}()
 
-	resp, err := p.session.DoRequest(pathFromID(subtitle.SubtitleID))
+	resp, err := p.session.DoRequest(ctx, pathFromID(subtitle.SubtitleID))
 	if err != nil {
 		return
 	}
@@ -132,8 +141,8 @@ func getSubtitleTitle(doc *goquery.Document) string {
 	return title
 }
 
-func getSubtitleResults(doc *goquery.Document) []OSOrgSubtitle {
-	subs := make([]OSOrgSubtitle, 0, 5)
+func getSubtitleResults(doc *goquery.Document) []providers.Subtitle {
+	subs := make([]providers.Subtitle, 0, 5)
 	rows := doc.Find(`#search_results > tbody > tr`)
 
 	rows.Each(func(i int, s *goquery.Selection) {
@@ -173,7 +182,7 @@ func cleanResultsTitle(t string) string {
 	return strings.Join(words, " ")
 }
 
-func encodeParams(baseURL string, opts providers.Options) string {
+func encodeParams(baseURL string, opts providers.SearchOptions) string {
 	sb := strings.Builder{}
 
 	filters := make([]string, 0, 10)

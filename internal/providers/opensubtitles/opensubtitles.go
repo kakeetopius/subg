@@ -75,9 +75,10 @@ func Login(opts LoginOptions) (err error) {
 	if err != nil {
 		return err
 	}
-
 	defer func() {
-		if err != nil {
+		if err == nil {
+			spinner.Success("Login Successfull")
+		} else {
 			spinner.Fail()
 		}
 	}()
@@ -104,11 +105,10 @@ func Login(opts LoginOptions) (err error) {
 	if err != nil {
 		return err
 	}
-	spinner.Success("Logged in Successfully")
 	return nil
 }
 
-func (p *OpenSubtitles) searchSubtitle(opts providers.Options) ([]OSSubtitle, error) {
+func (p *OpenSubtitles) searchSubtitle(opts providers.SearchOptions) ([]providers.Subtitle, error) {
 	if p.APIKey == "" {
 		return nil, fmt.Errorf("API Key is required to download from opensubtitles")
 	}
@@ -144,14 +144,20 @@ func (p *OpenSubtitles) searchSubtitle(opts providers.Options) ([]OSSubtitle, er
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if err == nil {
+			spinner.Success("Search Complete")
+		} else {
+			spinner.Fail()
+		}
+	}()
+
 	searchResp, err := client.SearchSubtitles(context.Background(), searchParams)
 	if err != nil {
-		spinner.Fail()
 		return nil, err
 	}
-	spinner.Success("Search Done")
 
-	subtitles := make([]OSSubtitle, 0, len(searchResp.Data))
+	subtitles := make([]providers.Subtitle, 0, len(searchResp.Data))
 	for _, sub := range searchResp.Data {
 		subtitleObj := OSSubtitle{
 			SubtitleID: sub.Attributes.SubtitleID,
@@ -237,7 +243,9 @@ func (p *OpenSubtitles) downloadSubtitle(ctx context.Context, subtitle *OSSubtit
 		return
 	}
 	defer func() {
-		if err != nil {
+		if err == nil {
+			spinner.Success("Download Complete")
+		} else {
 			spinner.Fail()
 		}
 	}()

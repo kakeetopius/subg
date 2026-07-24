@@ -54,20 +54,23 @@ The following is the list of supported providers so far in order of priority.
 				return err
 			}
 
-			providerSet := providers.NewProviderSet(args)
-			providerSet.WithOptions(providers.Options{
-				IMDBId:         imdbID,
-				Season:         season,
-				Episode:        episode,
-				Language:       subtitleLang,
-				Year:           releaseYear,
-				SubtitleFormat: formatType,
-				OutputFile:     outputFile,
-				OutputDir:      outputDir,
-				IsMovie:        isMovie,
-				IsSerie:        isSerie,
-				AutoSelect:     autoSelect,
-			})
+			providerSet := providers.NewProviderSet()
+			for _, query := range args {
+				providerSet.AppendQuery(providers.SearchOptions{
+					Query:          query,
+					IMDBId:         imdbID,
+					Season:         season,
+					Episode:        episode,
+					Language:       subtitleLang,
+					Year:           releaseYear,
+					SubtitleFormat: formatType,
+					OutputFile:     outputFile,
+					OutputDir:      outputDir,
+					IsMovie:        isMovie,
+					IsSerie:        isSerie,
+					AutoSelect:     autoSelect,
+				})
+			}
 
 			for _, provider := range providersToUse {
 				switch provider {

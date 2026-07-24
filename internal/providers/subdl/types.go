@@ -33,7 +33,7 @@ type SubtitleFeature struct {
 
 type SDSubtitle struct {
 	Name            string `json:"name"`
-	ID              int    `json:"-"` // not part of subdl api
+	SubID           int    `json:"-"` // not part of subdl api
 	ReleaseName     string `json:"release_name"`
 	Lang            string `json:"lang"`
 	Author          string `json:"author"`
