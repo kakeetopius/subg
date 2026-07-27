@@ -57,7 +57,6 @@ func (p *OpenSubtitlesOrg) SearchSubtitle(ctx context.Context, opts providers.Se
 		if opts.IsSerie {
 			return nil, fmt.Errorf("no results returned for %v Season %v Episode %v", opts.Query, opts.Season, opts.Episode)
 		}
-		return nil, fmt.Errorf("no Results returned for %v", opts.Query)
 	}
 	return subs, nil
 }

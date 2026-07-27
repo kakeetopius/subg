@@ -21,18 +21,18 @@ go install github.com/kakeetopius/subg@latest
 
 ## Subtitle Providers
 
-subg can download subtitles from different providers. The following is a list of supported providers so far in order of priority together with their codes that can be passed
-via the `--providers` flag or in the configuration file (see below).
+subg can download subtitles from different providers. The following is a list of supported providers in order of priority together with their codes that can be passed via the `--providers` flag or in the configuration file (see below).
 
-| Provider          | Code |
-| ----------------- | ---- |
-| opensubtitles.com | os   |
-| subdl.com         | sd   |
-| addic7ed.com      | a7   |
+| Provider          | Code   |
+| ----------------- | ------ |
+| opensubtitles.com | os     |
+| subdl.com         | sd     |
+| opensubtitles.org | os_org |
+| addic7ed.com      | a7     |
 
 > [!NOTE]
 > If no provider is specified via the `--providers` flag or the configuration file, all providers are tried in the order shown above.  
-> Multiple providers can be specified at once (e.g. --providers os,sd). Providers are then tried in the order given.
+> The order of trial can be changed by using the `--provider` flag or via the configuration file (See Below) e.g. `--providers a7,os,sd`. Providers are then tried in the order given.
 
 ## Quick Start
 
@@ -45,8 +45,7 @@ subg login --providers os --username <your_username> --password <your_password>
 ```
 
 - You can sign up for a free OpenSubtitles account at [opensubtitles.com](https://www.opensubtitles.com/).
-- For subdl.com only an API key is required. It can be obtained at [subdl.com](https://subdl.com/).
-- For addic7ed.com no login or API key is required.
+- The rest of the providers require no authentication or api keys.
 
 ### 2. Download Subtitles
 
@@ -210,11 +209,6 @@ api_key = "your-api-key-here"
 username = "your-username"
 password = "your-password"
 
-[subdl]
-# For subdl.com only the API key is required.
-# It can be set here or passed via the --api-key flag.
-api_key = "subdl_api_key"
-
 [transcriber]
 # Hugging Face access token for accessing Whisper transcribing models.
 # It can be set here or passed via the --hf-token flag or via the env variable HF_TOKEN
@@ -226,7 +220,6 @@ The config file can be also given using the `--config` flag.
 ### Environment Variables
 
 - `OPENSUBTITLES_API_KEY` - API key for OpenSubtitles
-- `SUBDL_API_KEY` - API key for subdl.com
 - `HF_TOKEN` - Hugging Face Access Token
 
 ## Future Plans
