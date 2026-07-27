@@ -78,6 +78,13 @@ func (m SessionManager) GetSession(domain, challengeURL string, forceRefresh boo
 	if challengeURL == "" {
 		challengeURL = baseURL
 	}
+	var s Session
+
+	if len(m.MustHaveCookies[domain]) == 0 {
+		// if no cookies required just init session's http client and return
+		s.initSessionHTTPClient(baseURL)
+		return s, nil
+	}
 
 	if !forceRefresh {
 		cachedSession, err := m.loadSessionFromCachedFile(domain)

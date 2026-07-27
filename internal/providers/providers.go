@@ -20,6 +20,17 @@ import (
 
 var ErrNextProvider = errors.New("user requested next provider")
 
+type ErrNoResultsFound struct {
+	Query   string
+	Season  int
+	Episode int
+}
+
+func (e ErrNoResultsFound) Error() string {
+	o := SearchOptions{Query: e.Query, Season: e.Season, Episode: e.Episode}
+	return "no results found for " + o.defaultName()
+}
+
 // Provider searches for and downloads subtitles from a subtitle service.
 type Provider interface {
 	// Name returns the provider's display name.
@@ -112,7 +123,7 @@ func (set *ProviderSet) StartSearchAndDownload() error {
 outer:
 	for _, query := range set.subtitleQueries {
 		fmt.Println()
-		pterm.Info.Printf("Searching Subtitles for: %s\n", query.defaultOutputFileName())
+		pterm.Info.Printf("Searching Subtitles for: %s\n", query.defaultName())
 		for _, provider := range set.providers {
 			pterm.Info.Printf("Trying provider: %s\n", provider.Name())
 
@@ -181,7 +192,7 @@ func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchO
 	if queryParams.OutputFile != "" {
 		outFileName = util.StripExtension(queryParams.OutputFile)
 	} else {
-		outFileName = cmp.Or(subFile.Name, queryParams.defaultOutputFileName())
+		outFileName = cmp.Or(subFile.Name, queryParams.defaultName())
 	}
 
 	outFileName = subformat.AddExtensionToSubFile(outFileName, queryParams.SubtitleFormat)
@@ -208,8 +219,8 @@ func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchO
 	return nil
 }
 
-// defaultOutputFileName returns a default output file name based on the search options. If the search is for a series, it includes the season and episode numbers in the file name.
-func (o *SearchOptions) defaultOutputFileName() string {
+// defaultName returns a default output file name based on the search options. If the search is for a series, it includes the season and episode numbers in the file name.
+func (o *SearchOptions) defaultName() string {
 	if o.IsSerie {
 		sb := strings.Builder{}
 		sb.WriteString(o.Query)

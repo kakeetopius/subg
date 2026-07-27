@@ -51,7 +51,7 @@ func (p *OpenSubtitlesOrg) search(opts providers.SearchOptions) ([]providers.Sub
 			spinner.Fail()
 		}
 	}()
-	resp, err := p.session.DoRequest(context.Background(), encodeParams(searchPath, opts))
+	resp, err := p.session.Get(context.Background(), encodeParams(searchPath, opts), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (p *OpenSubtitlesOrg) search(opts providers.SearchOptions) ([]providers.Sub
 }
 
 func (p *OpenSubtitlesOrg) downloadSubtitle(ctx context.Context, subtitle *OSOrgSubtitle) (subtitleFile providers.SubtitleFile, err error) {
-	p.session.Client.WithBaseURL(opensubtitlesDLURL)
+	p.session.WithBaseURL(opensubtitlesDLURL)
 
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
 	if err != nil {
@@ -87,7 +87,7 @@ func (p *OpenSubtitlesOrg) downloadSubtitle(ctx context.Context, subtitle *OSOrg
 		}
 	}()
 
-	resp, err := p.session.DoRequest(ctx, pathFromID(subtitle.SubtitleID))
+	resp, err := p.session.Get(ctx, downloadPathFromID(subtitle.SubtitleID), nil)
 	if err != nil {
 		return
 	}
@@ -119,15 +119,6 @@ func (p *OpenSubtitlesOrg) downloadSubtitle(ctx context.Context, subtitle *OSOrg
 	}, nil
 }
 
-func pathFromID(s string) string {
-	return dlPath + "/" + s
-}
-
-func extractSubID(path string) string {
-	elem := strings.Split(path, "/")
-	return elem[len(elem)-1]
-}
-
 func getSubtitleTitle(doc *goquery.Document) string {
 	title := ""
 	doc.Find(`#subtitles_body > div.content > div:nth-child(13) > div > h1`).Each(func(i int, s *goquery.Selection) {
@@ -153,6 +144,7 @@ func getSubtitleResults(doc *goquery.Document) []providers.Subtitle {
 		}
 		dlPath, _ := s.Find(`td:nth-child(5) > a`).Attr("href")
 		votes := s.Find(`td:nth-child(6)`).First().Text()
+
 		subs = append(subs, OSOrgSubtitle{
 			Name:       cleanResultsTitle(title),
 			SubtitleID: extractSubID(dlPath),
@@ -232,4 +224,13 @@ func encodeName(n string) string {
 	}
 
 	return sb.String()
+}
+
+func downloadPathFromID(s string) string {
+	return dlPath + "/" + s
+}
+
+func extractSubID(path string) string {
+	elem := strings.Split(path, "/")
+	return elem[len(elem)-1]
 }

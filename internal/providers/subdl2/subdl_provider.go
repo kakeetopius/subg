@@ -1,5 +1,4 @@
-// Package subdl is used to search for subtitles from subdl.com
-package subdl
+package subdl2
 
 import (
 	"context"
@@ -8,20 +7,30 @@ import (
 	"github.com/kakeetopius/subg/internal/providers"
 )
 
+type SubDL struct {
+	SubDLOpts
+}
+
+type SubDLOpts struct {
+	APIKey string
+}
+
 func (s SDSubtitle) ID() string {
 	return fmt.Sprint(s.SubID)
 }
 
 func (s SDSubtitle) Fields() []string {
-	return []string{s.SubID, s.Name, s.Author}
+	return []string{fmt.Sprint(s.SubID), s.ReleaseName, s.Lang, s.Author}
 }
 
-func NewProvider() *SubDL {
-	return new(SubDL)
+func NewProvider(opts SubDLOpts) *SubDL {
+	return &SubDL{
+		SubDLOpts: opts,
+	}
 }
 
 func (p *SubDL) Name() string {
-	return "subdl.com"
+	return "subdl.com via the api"
 }
 
 func (p *SubDL) SearchSubtitle(ctx context.Context, searchOpts providers.SearchOptions) ([]providers.Subtitle, error) {
@@ -33,7 +42,7 @@ func (p *SubDL) SearchSubtitle(ctx context.Context, searchOpts providers.SearchO
 	}
 	searchOpts.Type = featureType
 
-	subs, err := p.searchSubtitles(ctx, searchOpts)
+	subs, err := p.searchSubtitles(searchOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -53,9 +62,9 @@ func (p *SubDL) SelectBest(subs []providers.Subtitle) providers.Subtitle {
 
 func (p *SubDL) Download(ctx context.Context, sub providers.Subtitle) (providers.SubtitleFile, error) {
 	subtitle := sub.(SDSubtitle)
-	return p.downloadSubtitle(ctx, subtitle)
+	return downloadSubtitle(ctx, &subtitle)
 }
 
 func (p *SubDL) SubtitleHeaders() []string {
-	return []string{"ID", "Name", "Author"}
+	return []string{"ID", "Name", "Lang", "Author"}
 }

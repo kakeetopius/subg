@@ -9,6 +9,7 @@ import (
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
 	opensubtitlesorg "github.com/kakeetopius/subg/internal/providers/opensubtitles_org"
 	"github.com/kakeetopius/subg/internal/providers/subdl"
+	"github.com/kakeetopius/subg/internal/providers/subdl2"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/spf13/cobra"
 )
@@ -80,16 +81,22 @@ The following is the list of supported providers so far in order of priority.
 						CacheDir: appConfig.GetString("cache_dir"),
 					}))
 				case "sd":
-					providerSet.Append(subdl.NewProvider(subdl.SubDLOpts{
-						APIKey: appConfig.GetString("subdl.api_key"),
-					}))
+					providerSet.Append(subdl.NewProvider())
 				case "os_org":
 					providerSet.Append(opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
 						CacheDir: appConfig.GetString("cache_dir"),
 					}))
 				case "a7":
 					providerSet.Append(addic7ed.NewProvider())
-
+				case "sd_api":
+					providerSet.Append(subdl2.NewProvider(subdl2.SubDLOpts{
+						APIKey: appConfig.GetString("subdl.api_key"),
+					}))
+				case "os_api":
+					providerSet.Append(opensubtitles.NewProvider(opensubtitles.OSOptions{
+						APIKey:   appConfig.GetString("opensubtitles.api_key"),
+						CacheDir: appConfig.GetString("cache_dir"),
+					}))
 				default:
 					return fmt.Errorf("unknown provider code: %s", provider)
 				}
@@ -127,12 +134,13 @@ func addAllProvidersToSet(providerSet *providers.ProviderSet) {
 			APIKey:   appConfig.GetString("opensubtitles.api_key"),
 			CacheDir: appConfig.GetString("cache_dir"),
 		}),
-		subdl.NewProvider(subdl.SubDLOpts{
-			APIKey: appConfig.GetString("subdl.api_key"),
-		}),
+		subdl.NewProvider(),
 		opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
 			CacheDir: appConfig.GetString("cache_dir"),
 		}),
 		addic7ed.NewProvider(),
+		subdl2.NewProvider(subdl2.SubDLOpts{
+			APIKey: appConfig.GetString("subdl.api_key"),
+		}),
 	)
 }

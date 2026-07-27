@@ -1,8 +1,6 @@
 package sessions
 
 import (
-	"context"
-	"net/http"
 	"time"
 
 	"github.com/kakeetopius/subg/internal/httpclient"
@@ -14,7 +12,7 @@ type Session struct {
 	UserAgent      string `json:"user_agent"`
 	AcquiredAtUnix int64  `json:"acquired_at_unix"`
 
-	Client *httpclient.Client `json:"-"`
+	*httpclient.Client `json:"-"`
 }
 
 // isExpired checks if the session has expired based on the provided sessionTTL.
@@ -30,14 +28,4 @@ func (s Session) isUsable() bool {
 // initSessionHTTPClient initializes the HTTP client for the session with the provided baseURL, user agent, and cookie header.
 func (s *Session) initSessionHTTPClient(baseURL string) {
 	s.Client = httpclient.New().WithBaseURL(baseURL).WithUserAgent(s.UserAgent).WithCookie(s.CookieHeader)
-}
-
-// DoRequest performs an HTTP GET request to the specified path.
-func (s Session) DoRequest(ctx context.Context, path string) (*http.Response, error) {
-	return s.Client.Get(ctx, path, nil)
-}
-
-// DoRequestJSON performs an HTTP GET request to the specified path and decodes the JSON response into the provided target.
-func (s Session) DoRequestJSON(ctx context.Context, path string, target any) error {
-	return s.Client.GetJSON(ctx, path, nil, target)
 }

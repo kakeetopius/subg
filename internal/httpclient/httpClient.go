@@ -93,6 +93,10 @@ func (c *Client) DeleteJSON(ctx context.Context, path string, target any) error 
 	return c.doRequestJSON(ctx, http.MethodDelete, path, nil, nil, target)
 }
 
+func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	return c.httpClient.Do(req)
+}
+
 // doRequest performs the actual HTTP request.
 func (c *Client) doRequest(ctx context.Context, method, path string, params any, body any) (*http.Response, error) {
 	c.mu.RLock()
