@@ -172,7 +172,8 @@ providers = ["os", "sd"]
 cache_dir = "$HOME/.cache/subg"
 
 [transcriber]
-# Hugging Face access token for accessing Whisper transcribing models. It is optional
+# Hugging Face access token to use when accessing Whisper transcribing models.
+# This is optional but can offer higher rate limits  and possibly faster downloads if provided.
 # It can be set here or passed via the --hf-token flag or via the env variable HF_TOKEN
 hf_token = "your-hf-token-here"
 ```
@@ -181,7 +182,7 @@ The config file can be also given using the `--config` flag.
 
 ### Environment Variables
 
-- `HF_TOKEN` - Hugging Face Access Token
+- `HF_TOKEN` - Hugging Face Access Token. (It is optional, but it can offer higher rate limits and faster downloads.)
 
 ## Optional: Configure Authenticated Providers
 
@@ -198,7 +199,7 @@ To use the official opensubtitles.com API:
 2. Log in using:
 
 ```bash
-subg login --providers os_api --username <your_username> --password <your_password>
+subg login --provider os_api
 ```
 
 3. Obtain an API key from your opensubtitles.com [here.](https://www.opensubtitles.com/en/consumers)

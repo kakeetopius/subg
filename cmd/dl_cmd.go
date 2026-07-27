@@ -38,7 +38,7 @@ func DownloadCmd() *cobra.Command {
 
 subg is capable of downloading subtitles from various subtitle providers.
 The following is the list of supported providers so far in order of priority.
-  os:   opensubtitles.com
+  os:   opensubtitles.org
   sd:	subdl.com
   a7:   addic7ed.com
 `,

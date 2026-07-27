@@ -4,46 +4,64 @@ import (
 	"fmt"
 
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
 func LoginCmd() *cobra.Command {
 	var (
-		userName       string
-		password       string
-		providersGiven []string
+		userNameGiven string
+		passwordGiven string
+		providerGiven string
 	)
 
 	loginCmd := cobra.Command{
 		Use:   "login",
 		Short: "Authenticate to a subtitle provider",
 		Long: `Authenticate to a subtitle provider.
-Note that only opensubtitles (code: os) requires authentication at the moment`,
+Note that only opensubtitles.com (code: os_api) requires authentication`,
 		Aliases: []string{"l"},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			providersToUse := appConfig.GetStringSlice("login.providers")
-			if len(providersToUse) == 0 {
+			if providerGiven == "" {
 				return fmt.Errorf("please specify provider to authenticate to. Use subg login --help for more information")
 			}
+			if providerGiven != "os_api" {
+				return fmt.Errorf("only the provider os_api requires logging in")
+			}
 
-			for _, provider := range providersToUse {
-				switch provider {
-				case "os":
-					return opensubtitles.Login(opensubtitles.LoginOptions{
-						UserName: appConfig.GetString("opensubtitles.username"),
-						Password: appConfig.GetString("opensubtitles.password"),
-						APIKey:   appConfig.GetString("opensubtitles.api_key"),
-						CacheDir: appConfig.GetString("cache_dir"),
-					})
-				case "sd":
-					fmt.Println("Provider subdl.com doesn't need any authentication. The provider only requires an api key that can be passed via the --api-key flag or via the SUBDL_API_KEY or in the configuration file.")
-					return nil
-				case "a7":
-					fmt.Println("Provider: addic7ed.com doesn't need any authentication.")
-					return nil
-				default:
-					return fmt.Errorf("unknown provider: %v", providersToUse)
+			userName := appConfig.GetString("opensubtitles.username")
+			password := appConfig.GetString("opensubtitles.password")
+
+			var err error
+			if userName == "" {
+				var name string
+				for name == "" {
+					name, err = pterm.DefaultInteractiveTextInput.Show("Enter your username")
+					if err != nil {
+						return err
+					}
 				}
+				userName = name
+			}
+			if password == "" {
+				var pass string
+				for pass == "" {
+					pass, err = pterm.DefaultInteractiveTextInput.WithMask("*").Show("Enter your password")
+					if err != nil {
+						return err
+					}
+				}
+				password = pass
+			}
+
+			switch providerGiven {
+			case "os_api":
+				return opensubtitles.Login(opensubtitles.LoginOptions{
+					UserName: userName,
+					Password: password,
+					APIKey:   appConfig.GetString("opensubtitles.api_key"),
+					CacheDir: appConfig.GetString("cache_dir"),
+				})
 			}
 
 			return nil
@@ -51,8 +69,8 @@ Note that only opensubtitles (code: os) requires authentication at the moment`,
 	}
 
 	loginCmd.Flags().SortFlags = false
-	loginCmd.Flags().StringVarP(&userName, "username", "u", "", "The Account username for the specified provider.")
-	loginCmd.Flags().StringVarP(&password, "password", "P", "", "The Account password for the specified provider.")
+	loginCmd.Flags().StringVarP(&userNameGiven, "username", "u", "", "The Account username for the specified provider.")
+	loginCmd.Flags().StringVarP(&passwordGiven, "password", "P", "", "The Account password for the specified provider.")
 
 	userNamePflag := loginCmd.Flags().Lookup("username")
 	passwordPflag := loginCmd.Flags().Lookup("password")
@@ -60,7 +78,6 @@ Note that only opensubtitles (code: os) requires authentication at the moment`,
 	appConfig.BindPFlag("opensubtitles.username", userNamePflag)
 	appConfig.BindPFlag("opensubtitles.password", passwordPflag)
 
-	loginCmd.Flags().StringSliceVarP(&providersGiven, "providers", "p", nil, "The provider(s) to use.")
-	appConfig.BindPFlag("login.providers", loginCmd.Flags().Lookup("providers"))
+	loginCmd.Flags().StringVarP(&providerGiven, "provider", "p", "", "The provider to authenticate to.")
 	return &loginCmd
 }
