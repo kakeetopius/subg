@@ -11,6 +11,29 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
+var (
+	ErrUserQuit        = errors.New("user quit")
+	ErrNextProvider    = errors.New("user requested next provider")
+	TableWidthPadding  = 10
+	TableHeightPadding = 2
+
+	baseStyle = lipgloss.NewStyle().
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("240"))
+)
+
+type model struct {
+	table table.Model
+	// selectedRowID is to identify which row was chosen when the final model is returned.
+	selectedRowID string
+	// identifierColumn is to determine which column will be used to set the selectedRowID
+	identifierColumn int
+	// userQuit is to signal that the user did not select any row but just quit!
+	userQuit bool
+	// nextProvider indicates that user wants to try the next subtitle provider
+	nextProvider bool
+}
+
 // DisplayTableAndGetSelectedID displays a table using the provided columns and rows, prompts the user to select a row, and returns the value of the first column of the
 // selected row. The first column is assumed to contain a unique identifier.
 func DisplayTableAndGetSelectedID(rows []table.Row, columns []table.Column) (string, error) {
@@ -35,29 +58,6 @@ func DisplayTableAndGetSelectedID(rows []table.Row, columns []table.Column) (str
 	}
 
 	return finalModel.selectedRowID, nil
-}
-
-var (
-	ErrUserQuit        = errors.New("user quit")
-	ErrNextProvider    = errors.New("user requested next provider")
-	TableWidthPadding  = 10
-	TableHeightPadding = 2
-
-	baseStyle = lipgloss.NewStyle().
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("240"))
-)
-
-type model struct {
-	table table.Model
-	// selectedRowID is to identify which row was chosen when the final model is returned.
-	selectedRowID string
-	// identifierColumn is to determine which column will be used to set the selectedRowID
-	identifierColumn int
-	// userQuit is to signal that the user did not select any row but just quit!
-	userQuit bool
-	// nextProvider indicates that user wants to try the next subtitle provider
-	nextProvider bool
 }
 
 func (m model) Init() tea.Cmd { return nil }

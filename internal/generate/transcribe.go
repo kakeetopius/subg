@@ -2,6 +2,7 @@
 package generate
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -75,10 +76,10 @@ func Transcribe(opts TransciberOptions) error {
 }
 
 func transcribeFile(opts *TransciberOptions) error {
-	pterm.Info.Println("Transcribing Audio. This might take a while if the model is not yet offline.....")
+	pterm.Info.Println("Transcribing Audio. This might take a while.....")
 
 	flags := []string{
-		"--model", defaultVal(opts.Model, defaultModelName),
+		"--model", cmp.Or(opts.Model, defaultModelName),
 		"--output_format", "srt",
 	}
 
@@ -98,7 +99,7 @@ func translateFiles(opts *TransciberOptions) error {
 	pterm.Info.Println("Translating Audio......")
 
 	flags := []string{
-		"--model", defaultVal(opts.Model, defaultModelName),
+		"--model", cmp.Or(opts.Model, defaultModelName),
 		"--task", "translate",
 		"--output_format", "srt",
 	}
@@ -250,14 +251,6 @@ func installTranscriber(cacheDir string, verbose bool) error {
 	)
 
 	return runCmd(cmd, verbose)
-}
-
-func defaultVal(try string, defaultVal string) string {
-	if try == "" {
-		return defaultVal
-	}
-
-	return try
 }
 
 func buildArgs(sets ...[]string) []string {
