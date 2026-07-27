@@ -23,31 +23,19 @@ go install github.com/kakeetopius/subg@latest
 
 subg can download subtitles from different providers. The following is a list of supported providers in order of priority together with their codes that can be passed via the `--providers` flag or in the configuration file (see below).
 
-| Provider          | Code   |
-| ----------------- | ------ |
-| opensubtitles.com | os     |
-| subdl.com         | sd     |
-| opensubtitles.org | os_org |
-| addic7ed.com      | a7     |
+| Provider          | Code |
+| ----------------- | ---- |
+| subdl.com         | sd   |
+| opensubtitles.org | os   |
+| addic7ed.com      | a7   |
 
 > [!NOTE]
 > If no provider is specified via the `--providers` flag or the configuration file, all providers are tried in the order shown above.  
-> The order of trial can be changed by using the `--provider` flag or via the configuration file (See Below) e.g. `--providers a7,os,sd`. Providers are then tried in the order given.
+> The order of trial can be changed by using the `--provider` flag or via the configuration file (See Below) e.g. `--providers a7,sd,os`. Providers are then tried in the order given.
 
 ## Quick Start
 
-### 1. Login to Provider
-
-Before you can search and download subtitles specifically using Open Subtitles, you must authenticate with OpenSubtitles:
-
-```bash
-subg login --providers os --username <your_username> --password <your_password>
-```
-
-- You can sign up for a free OpenSubtitles account at [opensubtitles.com](https://www.opensubtitles.com/).
-- The rest of the providers require no authentication or api keys.
-
-### 2. Download Subtitles
+### 1. Download Subtitles
 
 ```bash
 # Download a movie subtitle in English
@@ -60,7 +48,7 @@ subg download "Bridge and Tunnel" --season 1 --episode 5 --lang en
 subg download "Grown Ups 2" --lang en --output-file GU2.srt --output-dir ./subtitles
 ```
 
-### 3. Generate Subtitles from Video or Audio
+### 2. Generate Subtitles from Video or Audio
 
 ```bash
 # Generate subtitles from a video file
@@ -73,7 +61,7 @@ subg generate movie.mp4 --translate
 subg generate movie.mp4 --model large-v3
 ```
 
-### 4. Convert Subtitles
+### 3. Convert Subtitles
 
 ```bash
 # Convert an SRT file to VTT
@@ -154,23 +142,6 @@ subg convert --in <input-file> [flags]
 
 </details>
 
-### login
-
-Authenticate to a subtitle provider. Alias: `l`.
-
-```bash
-subg login --providers <provider> [flags]
-```
-
-<details>
-<summary>Flags</summary>
-
-- `--providers, -p` - Provider(s) to authenticate to
-- `--username, -u` - Account username
-- `--password, -P` - Account password
-
-</details>
-
 ## Configuration
 
 Configuration can be set via:
@@ -200,17 +171,8 @@ providers = ["os", "sd"]
 # Directory to store temporary information like JWT tokens for an OpenSubtitles session.
 cache_dir = "$HOME/.cache/subg"
 
-[opensubtitles]
-# The OpenSubtitles API key is required when using OpenSubtitles.
-# It can be set here or passed via the --api-key flag.
-api_key = "your-api-key-here"
-# Username and password used when logging in to OpenSubtitles.
-# They can be set here or passed via corresponding flags.
-username = "your-username"
-password = "your-password"
-
 [transcriber]
-# Hugging Face access token for accessing Whisper transcribing models.
+# Hugging Face access token for accessing Whisper transcribing models. It is optional
 # It can be set here or passed via the --hf-token flag or via the env variable HF_TOKEN
 hf_token = "your-hf-token-here"
 ```
@@ -219,8 +181,64 @@ The config file can be also given using the `--config` flag.
 
 ### Environment Variables
 
-- `OPENSUBTITLES_API_KEY` - API key for OpenSubtitles
 - `HF_TOKEN` - Hugging Face Access Token
+
+## Optional: Configure Authenticated Providers
+
+By default, subg can search and download subtitles using `subdl.com`, `opensubtitles.org`, and `addic7ed.com` without requiring an account or API key.
+
+For improved search capabilities, higher reliability, or access to the official APIs, subg also supports the API-based providers below:
+
+<details>
+<summary>opensubtitles.com</summary>
+
+To use the official opensubtitles.com API:
+
+1. Create an account [here](https://www.opensubtitles.com) if you don't have one already.
+2. Log in using:
+
+```bash
+subg login --providers os_api --username <your_username> --password <your_password>
+```
+
+3. Obtain an API key from your opensubtitles.com [here.](https://www.opensubtitles.com/en/consumers)
+4. Add the API key to your `subg.toml` configuration file:
+
+```toml
+[opensubtitles]
+api_key = "your-api-key"
+```
+
+The provider code for the API-based provider is **`os_api`**. You can include it in the provider list to give it priority, for example:
+
+```toml
+providers = ["os_api", "sd", "os", "a7"]
+```
+
+</details>
+
+<details>
+<summary>subdl.com</summary>
+
+Although subg can use subdl.com without authentication, you may also use the official SubDL API.
+
+1. Obtain an API key from the website [here](https://subdl.com/panel/api)
+2. Add it to your configuration file:
+
+```toml
+[subdl]
+api_key = "your-api-key"
+```
+
+The provider code for the API-based provider is **`sd_api`**. To prioritize it, include it in your provider list, for example:
+
+```toml
+providers = ["sd_api", "os", "a7"]
+```
+
+</details>
+
+The API-backed providers (`os_api` and `sd_api`) are separate from the providers `os` and `sd`. This allows you to choose whether to use the official APIs, the normal providers, or both.
 
 ## Future Plans
 

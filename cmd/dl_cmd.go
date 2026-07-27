@@ -73,29 +73,33 @@ The following is the list of supported providers so far in order of priority.
 				})
 			}
 
+			cacheDir := appConfig.GetString("cache_dir")
 			for _, provider := range providersToUse {
 				switch provider {
 				case "os":
-					providerSet.Append(opensubtitles.NewProvider(opensubtitles.OSOptions{
-						APIKey:   appConfig.GetString("opensubtitles.api_key"),
-						CacheDir: appConfig.GetString("cache_dir"),
+					providerSet.Append(opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
+						CacheDir: cacheDir,
 					}))
 				case "sd":
 					providerSet.Append(subdl.NewProvider())
-				case "os_org":
-					providerSet.Append(opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
-						CacheDir: appConfig.GetString("cache_dir"),
-					}))
 				case "a7":
 					providerSet.Append(addic7ed.NewProvider())
-				case "sd_api":
-					providerSet.Append(subdl2.NewProvider(subdl2.SubDLOpts{
-						APIKey: appConfig.GetString("subdl.api_key"),
-					}))
 				case "os_api":
+					apiKey := appConfig.GetString("opensubtitles.api_key")
+					if apiKey == "" {
+						continue
+					}
 					providerSet.Append(opensubtitles.NewProvider(opensubtitles.OSOptions{
-						APIKey:   appConfig.GetString("opensubtitles.api_key"),
-						CacheDir: appConfig.GetString("cache_dir"),
+						APIKey:   apiKey,
+						CacheDir: cacheDir,
+					}))
+				case "sd_api":
+					apiKey := appConfig.GetString("subdl.api_key")
+					if apiKey == "" {
+						continue
+					}
+					providerSet.Append(subdl2.NewProvider(subdl2.SubDLOpts{
+						APIKey: apiKey,
 					}))
 				default:
 					return fmt.Errorf("unknown provider code: %s", provider)
@@ -129,18 +133,32 @@ The following is the list of supported providers so far in order of priority.
 }
 
 func addAllProvidersToSet(providerSet *providers.ProviderSet) {
+	cacheDir := appConfig.GetString("cache_dir")
+
 	providerSet.Append(
-		opensubtitles.NewProvider(opensubtitles.OSOptions{
-			APIKey:   appConfig.GetString("opensubtitles.api_key"),
-			CacheDir: appConfig.GetString("cache_dir"),
+		opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
+			CacheDir: cacheDir,
 		}),
 		subdl.NewProvider(),
-		opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
-			CacheDir: appConfig.GetString("cache_dir"),
-		}),
 		addic7ed.NewProvider(),
-		subdl2.NewProvider(subdl2.SubDLOpts{
-			APIKey: appConfig.GetString("subdl.api_key"),
-		}),
 	)
+
+	openSubAPIKey := appConfig.GetString("opensubtitles.api_key")
+	if openSubAPIKey != "" {
+		providerSet.Append(
+			opensubtitles.NewProvider(opensubtitles.OSOptions{
+				APIKey:   appConfig.GetString("opensubtitles.api_key"),
+				CacheDir: cacheDir,
+			}),
+		)
+	}
+
+	subDLAPIKey := appConfig.GetString("subdl.api_key")
+	if subDLAPIKey != "" {
+		providerSet.Append(
+			subdl2.NewProvider(subdl2.SubDLOpts{
+				APIKey: appConfig.GetString("subdl.api_key"),
+			}),
+		)
+	}
 }
