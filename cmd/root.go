@@ -43,6 +43,8 @@ func init() {
 		cacheDir string
 	)
 
+	cobra.EnableCommandSorting = false
+
 	appConfig = viper.New()
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/subg.toml)")
@@ -66,10 +68,10 @@ func init() {
 
 	rootCmd.AddCommand(
 		DownloadCmd(),
-		LoginCmd(),
-		versionCmd(),
 		GenCmd(),
 		ConvertCmd(),
+		LoginCmd(),
+		versionCmd(),
 	)
 }
 

@@ -9,7 +9,7 @@ import (
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
 	opensubtitlesorg "github.com/kakeetopius/subg/internal/providers/opensubtitles_org"
 	"github.com/kakeetopius/subg/internal/providers/subdl"
-	"github.com/kakeetopius/subg/internal/providers/subdl2"
+	subdlapi "github.com/kakeetopius/subg/internal/providers/subdl_api"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/spf13/cobra"
 )
@@ -87,7 +87,7 @@ The following is the list of supported providers so far in order of priority.
 				case "os_api":
 					apiKey := appConfig.GetString("opensubtitles.api_key")
 					if apiKey == "" {
-						continue
+						return fmt.Errorf("cannot use os_api provider without an api key from opensubtitles.com")
 					}
 					providerSet.Append(opensubtitles.NewProvider(opensubtitles.OSOptions{
 						APIKey:   apiKey,
@@ -96,9 +96,9 @@ The following is the list of supported providers so far in order of priority.
 				case "sd_api":
 					apiKey := appConfig.GetString("subdl.api_key")
 					if apiKey == "" {
-						continue
+						return fmt.Errorf("cannot use sd_api provider without an api key subdl.com")
 					}
-					providerSet.Append(subdl2.NewProvider(subdl2.SubDLOpts{
+					providerSet.Append(subdlapi.NewProvider(subdlapi.SubDLOpts{
 						APIKey: apiKey,
 					}))
 				default:
@@ -156,7 +156,7 @@ func addAllProvidersToSet(providerSet *providers.ProviderSet) {
 	subDLAPIKey := appConfig.GetString("subdl.api_key")
 	if subDLAPIKey != "" {
 		providerSet.Append(
-			subdl2.NewProvider(subdl2.SubDLOpts{
+			subdlapi.NewProvider(subdlapi.SubDLOpts{
 				APIKey: appConfig.GetString("subdl.api_key"),
 			}),
 		)

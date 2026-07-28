@@ -1,5 +1,5 @@
-// Package subdl2 is used to search for subtitles from subdl.com using the official subdl api.
-package subdl2
+// Package subdlapi used to search for subtitles from subdl.com using the official subdl api.
+package subdlapi
 
 type SearchParams struct {
 	Query           *string `url:"film_name,omitempty"`
