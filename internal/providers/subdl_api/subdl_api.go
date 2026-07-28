@@ -1,4 +1,4 @@
-package subdl2
+package subdlapi
 
 import (
 	"context"

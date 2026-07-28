@@ -55,11 +55,22 @@ type SubtitleFile struct {
 
 func Login(opts LoginOptions) (err error) {
 	if opts.UserName == "" {
-		return fmt.Errorf("username cannot be empty")
-	} else if opts.Password == "" {
-		return fmt.Errorf("password cannot be empty")
-	} else if opts.APIKey == "" {
-		return fmt.Errorf("API Key is required to use opensubtitles")
+		opts.UserName, err = util.GetTermInput("Enter opensubtitles.com username", false)
+		if err != nil {
+			return err
+		}
+	}
+	if opts.Password == "" {
+		opts.Password, err = util.GetTermInput("Enter opensubtitles.com password", true)
+		if err != nil {
+			return err
+		}
+	}
+	if opts.APIKey == "" {
+		opts.APIKey, err = util.GetTermInput("Enter opensubtitles.com API Key", false)
+		if err != nil {
+			return err
+		}
 	}
 
 	authFile := path.Join(opts.CacheDir, CachedCredentialsFile)

@@ -191,9 +191,6 @@ func encodeParams(baseURL string, opts providers.SearchOptions) string {
 	if opts.Episode != 0 {
 		filters = append(filters, fmt.Sprintf("%v-%v", "episode", opts.Episode))
 	}
-	if opts.Language != "" {
-		filters = append(filters, fmt.Sprintf("%v-%v", "movielanguage", "english"))
-	}
 	if opts.Year != 0 {
 		filters = append(filters, fmt.Sprintf("%v-%v", "movieyear", opts.Year))
 		filters = append(filters, fmt.Sprintf("%v-%v", "movieyearsign", 1))

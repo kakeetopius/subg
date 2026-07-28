@@ -10,7 +10,10 @@ import (
 )
 
 func SubtitleFilesFromZip(zipfile io.Reader) ([]*zip.File, error) {
-	responseBytes, _ := io.ReadAll(zipfile)
+	responseBytes, err := io.ReadAll(zipfile)
+	if err != nil {
+		return nil, err
+	}
 	byteReader := bytes.NewReader(responseBytes)
 	byteReader.Seek(0, 0)
 

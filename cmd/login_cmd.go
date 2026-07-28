@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
-	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -29,36 +28,11 @@ Note that only opensubtitles.com (code: os_api) requires authentication`,
 				return fmt.Errorf("only the provider os_api requires logging in")
 			}
 
-			userName := appConfig.GetString("opensubtitles.username")
-			password := appConfig.GetString("opensubtitles.password")
-
-			var err error
-			if userName == "" {
-				var name string
-				for name == "" {
-					name, err = pterm.DefaultInteractiveTextInput.Show("Enter your username")
-					if err != nil {
-						return err
-					}
-				}
-				userName = name
-			}
-			if password == "" {
-				var pass string
-				for pass == "" {
-					pass, err = pterm.DefaultInteractiveTextInput.WithMask("*").Show("Enter your password")
-					if err != nil {
-						return err
-					}
-				}
-				password = pass
-			}
-
 			switch providerGiven {
 			case "os_api":
 				return opensubtitles.Login(opensubtitles.LoginOptions{
-					UserName: userName,
-					Password: password,
+					UserName: appConfig.GetString("opensubtitles.username"),
+					Password: appConfig.GetString("opensubtitles.password"),
 					APIKey:   appConfig.GetString("opensubtitles.api_key"),
 					CacheDir: appConfig.GetString("cache_dir"),
 				})
