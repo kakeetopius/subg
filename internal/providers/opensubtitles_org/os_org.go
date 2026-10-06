@@ -13,7 +13,6 @@ import (
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/kakeetopius/subg/internal/zip"
-	"github.com/pterm/pterm"
 )
 
 const (
@@ -43,14 +42,6 @@ func (p *OpenSubtitlesOrg) search(opts providers.SearchOptions) ([]providers.Sub
 	}
 	p.session = session
 
-	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on opensubtitles.org..........")
-	defer func() {
-		if err == nil {
-			spinner.Success("Search Complete")
-		} else {
-			spinner.Fail()
-		}
-	}()
 	resp, err := p.session.Get(context.Background(), encodeParams(searchPath, opts), nil)
 	if err != nil {
 		return nil, err
@@ -74,18 +65,6 @@ func (p *OpenSubtitlesOrg) search(opts providers.SearchOptions) ([]providers.Sub
 
 func (p *OpenSubtitlesOrg) downloadSubtitle(ctx context.Context, subtitle *OSOrgSubtitle) (subtitleFile providers.SubtitleFile, err error) {
 	p.session.WithBaseURL(opensubtitlesDLURL)
-
-	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
-	if err != nil {
-		return
-	}
-	defer func() {
-		if err == nil {
-			spinner.Success("Download Done")
-		} else {
-			spinner.Fail()
-		}
-	}()
 
 	resp, err := p.session.Get(ctx, downloadPathFromID(subtitle.SubtitleID), nil)
 	if err != nil {

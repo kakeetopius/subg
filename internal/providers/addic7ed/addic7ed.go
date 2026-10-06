@@ -8,7 +8,6 @@ import (
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/matcornic/addic7ed"
-	"github.com/pterm/pterm"
 )
 
 type A7Subtitle struct {
@@ -27,18 +26,6 @@ func searchSubtitle(opts providers.SearchOptions) ([]providers.Subtitle, error) 
 		// Example format for show name is "Game of Thrones 4 x 9" - Season 4 episode 9 of GOT
 		showName = fmt.Sprintf("%v - %v x %v", showName, opts.Season, opts.Episode)
 	}
-
-	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on addic7ed.com..........")
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err == nil {
-			spinner.Success("Search Complete")
-		} else {
-			spinner.Fail()
-		}
-	}()
 
 	show, err := client.SearchAll(showName)
 	if err != nil {
@@ -71,18 +58,6 @@ func downloadSubtitle(ctx context.Context, sub *A7Subtitle) (subtitleFile provid
 		Version:  sub.Version,
 		Link:     sub.Link,
 	}
-
-	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
-	if err != nil {
-		return
-	}
-	defer func() {
-		if err == nil {
-			spinner.Success("Download Complete")
-		} else {
-			spinner.Fail()
-		}
-	}()
 
 	subtitleBytes, err := subtitle.Download()
 	if err != nil {

@@ -36,13 +36,6 @@ func (p *Addic7ed) SearchSubtitle(ctx context.Context, opts providers.SearchOpti
 	return subs, nil
 }
 
-func (p *Addic7ed) SelectBest(subs []providers.Subtitle) providers.Subtitle {
-	if len(subs) != 0 {
-		return subs[0]
-	}
-	return A7Subtitle{}
-}
-
 func (p *Addic7ed) Download(ctx context.Context, sub providers.Subtitle) (providers.SubtitleFile, error) {
 	subtitle := sub.(A7Subtitle)
 	return downloadSubtitle(ctx, &subtitle)

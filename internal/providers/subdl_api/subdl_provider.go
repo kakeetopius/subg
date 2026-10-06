@@ -53,13 +53,6 @@ func (p *SubDL) SearchSubtitle(ctx context.Context, searchOpts providers.SearchO
 	return subs, nil
 }
 
-func (p *SubDL) SelectBest(subs []providers.Subtitle) providers.Subtitle {
-	if len(subs) != 0 {
-		return subs[0]
-	}
-	return SDSubtitle{}
-}
-
 func (p *SubDL) Download(ctx context.Context, sub providers.Subtitle) (providers.SubtitleFile, error) {
 	subtitle := sub.(SDSubtitle)
 	return downloadSubtitle(ctx, &subtitle)

@@ -61,13 +61,6 @@ func (p *OpenSubtitlesOrg) SearchSubtitle(ctx context.Context, opts providers.Se
 	return subs, nil
 }
 
-func (p *OpenSubtitlesOrg) SelectBest(subs []providers.Subtitle) providers.Subtitle {
-	if len(subs) != 0 {
-		return subs[0]
-	}
-	return OSOrgSubtitle{}
-}
-
 func (p *OpenSubtitlesOrg) Download(ctx context.Context, sub providers.Subtitle) (providers.SubtitleFile, error) {
 	subtitle := sub.(OSOrgSubtitle)
 	return p.downloadSubtitle(ctx, &subtitle)

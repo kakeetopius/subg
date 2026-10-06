@@ -151,18 +151,6 @@ func (p *OpenSubtitles) searchSubtitle(opts providers.SearchOptions) ([]provider
 		searchParams.EpisodeNumber = &opts.Episode
 	}
 
-	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on OpenSubtitles.........")
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err == nil {
-			spinner.Success("Search Complete")
-		} else {
-			spinner.Fail()
-		}
-	}()
-
 	searchResp, err := client.SearchSubtitles(context.Background(), searchParams)
 	if err != nil {
 		return nil, err
@@ -248,18 +236,6 @@ func (p *OpenSubtitles) downloadSubtitle(ctx context.Context, subtitle *OSSubtit
 		FileID:    file2Download.FileID,
 		SubFormat: &formatString,
 	}
-
-	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
-	if err != nil {
-		return
-	}
-	defer func() {
-		if err == nil {
-			spinner.Success("Download Complete")
-		} else {
-			spinner.Fail()
-		}
-	}()
 
 	downloadResp, err := client.Download(context.Background(), downloadRequest)
 	if err != nil {

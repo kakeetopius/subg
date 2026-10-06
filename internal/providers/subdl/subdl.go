@@ -13,7 +13,6 @@ import (
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/kakeetopius/subg/internal/zip"
-	"github.com/pterm/pterm"
 )
 
 const (
@@ -32,15 +31,6 @@ func (p *SubDL) searchSubtitles(ctx context.Context, opts providers.SearchOption
 	}
 	p.session = session
 
-	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on subdl.com..........")
-	defer func() {
-		if err == nil {
-			spinner.Success("Search Complete")
-		} else {
-			spinner.Fail()
-		}
-	}()
-
 	doc, err := p.getSubtitlesPage(ctx, &opts)
 	if err != nil {
 		return nil, err
@@ -50,18 +40,6 @@ func (p *SubDL) searchSubtitles(ctx context.Context, opts providers.SearchOption
 }
 
 func (p *SubDL) downloadSubtitle(ctx context.Context, sub SDSubtitle) (subtitleFile providers.SubtitleFile, err error) {
-	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
-	if err != nil {
-		return
-	}
-	defer func() {
-		if err == nil {
-			spinner.Success("Download Done")
-		} else {
-			spinner.Fail()
-		}
-	}()
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, sub.DownloadLink, nil)
 	if err != nil {
 		return

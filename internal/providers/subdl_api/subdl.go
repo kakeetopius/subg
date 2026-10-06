@@ -9,7 +9,6 @@ import (
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/kakeetopius/subg/internal/zip"
-	"github.com/pterm/pterm"
 )
 
 func (p *SubDL) searchSubtitles(searchOptions providers.SearchOptions) ([]providers.Subtitle, error) {
@@ -43,18 +42,6 @@ func (p *SubDL) searchSubtitles(searchOptions providers.SearchOptions) ([]provid
 		searchParams.Languages = &searchOptions.Language
 	}
 
-	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on subdl.com.........")
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err == nil {
-			spinner.Success("Search Complete")
-		} else {
-			spinner.Fail()
-		}
-	}()
-
 	results, err := c.SearchSubtitles(context.Background(), searchParams)
 	if err != nil {
 		return nil, err
@@ -77,18 +64,6 @@ func downloadSubtitle(ctx context.Context, subtitle *SDSubtitle) (subtitleFile p
 		return
 	}
 	url := SUBDLDOWNLOADURL + subtitle.URL
-
-	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle.........")
-	if err != nil {
-		return
-	}
-	defer func() {
-		if err == nil {
-			spinner.Success("Download Done")
-		} else {
-			spinner.Fail()
-		}
-	}()
 
 	client := http.Client{}
 	resp, err := client.Get(url)

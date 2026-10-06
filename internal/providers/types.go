@@ -3,7 +3,6 @@ package providers
 
 import (
 	"context"
-	"errors"
 	"io"
 
 	"github.com/kakeetopius/subg/internal/subformat"
@@ -16,9 +15,6 @@ type Provider interface {
 
 	// SearchSubtitle searches for subtitles matching the supplied options and returns the matching subtitles.
 	SearchSubtitle(ctx context.Context, opts SearchOptions) ([]Subtitle, error)
-
-	// SelectBest selects the best subtitle from the given search results according to the provider's selection criteria.
-	SelectBest([]Subtitle) Subtitle
 
 	// Download downloads the given subtitle and returns its contents.
 	Download(ctx context.Context, subtitle Subtitle) (SubtitleFile, error)
@@ -53,8 +49,16 @@ type ProviderSet struct {
 	// providers is the set of registered subtitle providers.
 	providers []Provider
 
-	// subtitleQueries are the subtitles to search for
-	subtitleQueries []SearchOptions
+	ProviderSetOptions
+}
+
+type ProviderSetOptions struct {
+	AutoSelect bool
+
+	// Queries are the subtitles to search for
+	Queries []SearchOptions
+
+	Directory string
 }
 
 // SearchOptions are the general options for searching and downloading subtitles.
@@ -74,10 +78,7 @@ type SearchOptions struct {
 	SubtitleFormat subformat.FormatType
 	OutputFile     string
 	OutputDir      string
-	AutoSelect     bool
 }
-
-var ErrNextProvider = errors.New("user requested next provider")
 
 type ErrNoResultsFound struct {
 	Query   string

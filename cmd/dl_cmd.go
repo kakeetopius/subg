@@ -24,10 +24,11 @@ func DownloadCmd() *cobra.Command {
 		outputFile     string
 		outputDir      string
 		imdbID         int
+		directory      string
 
 		isMovie        bool
 		isSerie        bool
-		autoSelect     bool
+		noAutoSelect   bool
 		providersGiven []string
 	)
 
@@ -43,7 +44,6 @@ The following is the list of supported providers so far in order of priority.
   a7:   addic7ed.com
 `,
 		Aliases: []string{"dl", "d"},
-		Args:    cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			providersToUse := appConfig.GetStringSlice("providers")
 
@@ -55,7 +55,10 @@ The following is the list of supported providers so far in order of priority.
 				return err
 			}
 
-			providerSet := providers.NewProviderSet()
+			providerSet := providers.NewProviderSet(providers.ProviderSetOptions{
+				Directory:  directory,
+				AutoSelect: !noAutoSelect,
+			})
 			for _, query := range args {
 				providerSet.AppendQuery(providers.SearchOptions{
 					Query:          query,
@@ -69,7 +72,6 @@ The following is the list of supported providers so far in order of priority.
 					OutputDir:      outputDir,
 					IsMovie:        isMovie,
 					IsSerie:        isSerie,
-					AutoSelect:     autoSelect,
 				})
 			}
 
@@ -119,11 +121,12 @@ The following is the list of supported providers so far in order of priority.
 	dlCmd.Flags().IntVarP(&season, "season", "s", 0, "The season if getting subtitles for a serie.")
 	dlCmd.Flags().IntVarP(&episode, "episode", "e", 0, "The episode number in a serie's season.")
 	dlCmd.Flags().StringVarP(&subtitleFormat, "format", "f", "srt", "The format to save the subtitle file(s) as.")
+	dlCmd.Flags().StringVarP(&directory, "dir", "d", "", "Download subtitles for all movies / tv shows in a a directory.")
 	dlCmd.Flags().IntVarP(&releaseYear, "year", "y", 0, "The release year of the movie or show")
 	dlCmd.Flags().StringVarP(&outputFile, "output-file", "o", "", "The output file name for downloaded subtitle.")
 	dlCmd.Flags().StringVar(&outputDir, "output-dir", "", "The output directory name for downloaded subtitle.")
 	dlCmd.Flags().IntVar(&imdbID, "imdb-id", 0, "Download a show or movie using imdb ID.")
-	dlCmd.Flags().BoolVar(&autoSelect, "auto", false, "Automatically select one subtitle to download without asking user.")
+	dlCmd.Flags().BoolVar(&noAutoSelect, "no-auto", false, "Do not automatically select subtitle to download rather show results to allow the user to select.")
 	dlCmd.Flags().BoolVar(&isMovie, "movie", false, "Specifies that the query is for a movie to reduce ambiguity")
 	dlCmd.Flags().BoolVar(&isSerie, "serie", false, "Specifies that the query is for a serie to reduce ambiguity")
 

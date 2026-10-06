@@ -18,9 +18,10 @@ import (
 )
 
 // NewProviderSet creates a new ProviderSet
-func NewProviderSet() *ProviderSet {
+func NewProviderSet(opts ProviderSetOptions) *ProviderSet {
 	return &ProviderSet{
-		providers: make([]Provider, 0, 5),
+		providers:          make([]Provider, 0, 5),
+		ProviderSetOptions: opts,
 	}
 }
 
@@ -32,34 +33,85 @@ func (set *ProviderSet) Append(provider ...Provider) *ProviderSet {
 
 // AppendQuery adds one or more subtitle search queries to the ProviderSet and returns the updated set.
 func (set *ProviderSet) AppendQuery(query ...SearchOptions) *ProviderSet {
-	set.subtitleQueries = append(set.subtitleQueries, query...)
+	set.Queries = append(set.Queries, query...)
 	return set
 }
 
 // StartSearchAndDownload starts the search and download process for all subtitle queries in the ProviderSet. It iterates through each query and attempts to find and download subtitles from the registered providers. If a provider returns an error, it will continue to the next provider.
 func (set *ProviderSet) StartSearchAndDownload() error {
+	if set.Directory != "" {
+		queries, err := getQueriesFromDirectory(set.Directory)
+		if err != nil {
+			return err
+		}
+		set.AppendQuery(queries...)
+	}
+
+	if len(set.Queries) == 0 {
+		return fmt.Errorf(" No queries provided ")
+	}
+
 outer:
-	for _, query := range set.subtitleQueries {
+	for _, query := range set.Queries {
 		fmt.Println()
 		pterm.Info.Printf("Searching Subtitles for: %s\n", query.defaultName())
-		for _, provider := range set.providers {
+
+		for i, provider := range set.providers {
 			pterm.Info.Printf("Trying provider: %s\n", provider.Name())
 
 			err := set.searchSubtitleWithProvider(provider, query)
-			if err != nil {
-				if errors.Is(err, ui.ErrUserQuit) {
-					return nil
-				}
-				if !errors.Is(err, ui.ErrNextProvider) {
-					pterm.Error.Printf("Provider %s returned error: %s\n", provider.Name(), err)
-				}
-				continue
+			if err == nil {
+				continue outer // move on to the next query
 			}
-			continue outer
+
+			if errors.Is(err, ui.ErrUserQuit) {
+				return nil
+			}
+
+			if errors.Is(err, ui.ErrNextProvider) && i < len(set.providers) {
+				continue // if next provider is requested and there are still some providers
+			}
+
+			if !errors.Is(err, ui.ErrNextProvider) { // prevents printing of ErrNextProvider
+				pterm.Error.Printf("Provider '%v' returned an error: %v\n", provider.Name(), err)
+			}
+
+			if i == len(set.providers)-1 {
+				pterm.Info.Printf("No more providers to try\n")
+			}
 		}
 	}
 
 	return nil
+}
+
+func getQueriesFromDirectory(dir string) ([]SearchOptions, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	searches := make([]SearchOptions, 0, len(files))
+	for _, file := range files {
+		if !isVideoExtension(util.ExtensionOf(file.Name())) {
+			continue
+		}
+		if file.IsDir() {
+			continue
+		}
+
+		searches = append(searches, SearchOptions{
+			Query:          util.StripExtension(file.Name()),
+			OutputDir:      dir,
+			SubtitleFormat: subformat.FormatTypeSRT,
+		})
+	}
+
+	if len(searches) == 0 {
+		pterm.Warning.Println("Could not detect any video files in the directory: ", dir)
+	}
+
+	return searches, nil
 }
 
 // searchSubtitleWithProvider searches for subtitles using the specified provider and query parameters.
@@ -67,32 +119,75 @@ func (set *ProviderSet) searchSubtitleWithProvider(provider Provider, queryParam
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	spinner, err := pterm.DefaultSpinner.Start("Searching subtitles on ", provider.Name())
+	if err != nil {
+		return err
+	}
+	defer spinner.Stop()
+
 	subs, err := provider.SearchSubtitle(ctx, queryParams)
+	if err != nil {
+		spinner.Fail()
+		return err
+	}
+
+	if len(subs) == 0 {
+		spinner.Fail()
+		return fmt.Errorf("no subtitles returned by provider '%v", provider.Name())
+	}
+
+	spinner.Success("Search Done")
+
+	// if user wants to autoselect we try to download all the subs returned by the provider until one is successful.
+	if set.AutoSelect {
+		for i, sub := range subs {
+			err = set.tryDownloadSub(ctx, sub, provider, &queryParams)
+			if err == nil {
+				return nil
+			}
+			pterm.Error.Printf("Error downloading subtitle: %v\n", err)
+			if i < len(subs)-1 {
+				pterm.Info.Println("Trying the next subtitle returned by the provider.")
+			}
+		}
+		// try next provider coz all the subs returned by this provider failed.
+		return ui.ErrNextProvider
+	}
+
+	// if user wants to select subtitles for themselves we prompt for selection(s) and download each and returning an error as soon as one fails.
+	selected, err := promptSelection(provider.SubtitleHeaders(), subs)
 	if err != nil {
 		return err
 	}
 
-	todownload := make([]Subtitle, 0, 5)
-	if queryParams.AutoSelect {
-		todownload = append(todownload, provider.SelectBest(subs))
-	} else {
-		selected, err := promptSelection(provider.SubtitleHeaders(), subs)
+	for _, sub := range selected {
+		err = set.tryDownloadSub(ctx, sub, provider, &queryParams)
 		if err != nil {
 			return err
 		}
-		todownload = append(todownload, selected...)
+	}
+	return nil
+}
+
+func (set *ProviderSet) tryDownloadSub(ctx context.Context, sub Subtitle, provider Provider, queryParams *SearchOptions) error {
+	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle")
+
+	defer func() {
+		if err == nil {
+			spinner.Success("Download Complete")
+		} else {
+			spinner.Fail()
+		}
+	}()
+
+	subFile, err := provider.Download(ctx, sub)
+	if err != nil {
+		return err
 	}
 
-	for _, sub := range todownload {
-		subFile, err := provider.Download(ctx, sub)
-		if err != nil {
-			return err
-		}
-
-		err = set.saveSubtitle(&subFile, &queryParams)
-		if err != nil {
-			return err
-		}
+	err = set.saveSubtitle(&subFile, queryParams)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -210,4 +305,13 @@ func subtitleByID(subs []Subtitle, id string) (Subtitle, error) {
 	}
 
 	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
+}
+
+func isVideoExtension(ext string) bool {
+	switch strings.ToLower(ext) {
+	case ".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv", ".m4v":
+		return true
+	default:
+		return false
+	}
 }
