@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
 
 	"github.com/kakeetopius/subg/internal/subformat"
@@ -117,7 +118,7 @@ func translateFiles(opts *TransciberOptions) error {
 }
 
 func runTranscriber(opts *TransciberOptions, args []string) error {
-	transcriber := filepath.Join(opts.CacheDir, transcriberEnvDir, "bin", transcriberName)
+	transcriber := filepath.Join(opts.CacheDir, transcriberEnvDir, getPyEnvBinDir(), transcriberName)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -227,7 +228,7 @@ func initTranscirberPyEnv(cacheDir string, verbose bool) error {
 }
 
 func installTranscriber(cacheDir string, verbose bool) error {
-	transcriberPath := filepath.Join(cacheDir, transcriberEnvDir, "bin", transcriberName)
+	transcriberPath := filepath.Join(cacheDir, transcriberEnvDir, getPyEnvBinDir(), transcriberName)
 
 	if util.FileExists(transcriberPath) {
 		return nil
@@ -243,7 +244,7 @@ func installTranscriber(cacheDir string, verbose bool) error {
 
 	pterm.Info.Println("Installing the transcriber......")
 
-	pip := filepath.Join(cacheDir, transcriberEnvDir, "bin", "pip")
+	pip := filepath.Join(cacheDir, transcriberEnvDir, getPyEnvBinDir(), "pip")
 
 	cmd := exec.CommandContext(
 		ctx,
@@ -322,4 +323,13 @@ func awaitSignal() {
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGQUIT)
 
 	<-signalChan
+}
+
+func getPyEnvBinDir() string {
+	// On windows, the python -m venv command places binaries in the 'Scripts' directory
+	if runtime.GOOS == "windows" {
+		return "Scripts"
+	}
+
+	return "bin"
 }
