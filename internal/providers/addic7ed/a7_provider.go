@@ -30,9 +30,6 @@ func (p *Addic7ed) SearchSubtitle(ctx context.Context, opts providers.SearchOpti
 	if err != nil {
 		return nil, err
 	}
-	if len(subs) == 0 {
-		return nil, providers.ErrNoResultsFound{Query: opts.Query, Episode: opts.Episode, Season: opts.Season}
-	}
 	return subs, nil
 }
 

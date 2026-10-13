@@ -46,10 +46,6 @@ func (p *SubDL) SearchSubtitle(ctx context.Context, searchOpts providers.SearchO
 	if err != nil {
 		return nil, err
 	}
-
-	if len(subs) == 0 {
-		return nil, providers.ErrNoResultsFound{Query: searchOpts.Query, Episode: searchOpts.Episode, Season: searchOpts.Season}
-	}
 	return subs, nil
 }
 

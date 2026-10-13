@@ -56,8 +56,9 @@ The following is the list of supported providers so far in order of priority.
 			}
 
 			providerSet := providers.NewProviderSet(providers.ProviderSetOptions{
-				Directory:  directory,
-				AutoSelect: !noAutoSelect,
+				Directory:        directory,
+				AutoSelect:       !noAutoSelect,
+				DefaultSubFormat: formatType,
 			})
 			for _, query := range args {
 				providerSet.AppendQuery(providers.SearchOptions{

@@ -59,6 +59,8 @@ type ProviderSetOptions struct {
 	Queries []SearchOptions
 
 	Directory string
+
+	DefaultSubFormat subformat.FormatType
 }
 
 // SearchOptions are the general options for searching and downloading subtitles.

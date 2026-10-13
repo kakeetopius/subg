@@ -2,7 +2,6 @@ package opensubtitlesorg
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/sessions"
@@ -52,11 +51,6 @@ func (p *OpenSubtitlesOrg) SearchSubtitle(ctx context.Context, opts providers.Se
 	subs, err := p.search(opts)
 	if err != nil {
 		return nil, err
-	}
-	if len(subs) == 0 {
-		if opts.IsSerie {
-			return nil, fmt.Errorf("no results returned for %v Season %v Episode %v", opts.Query, opts.Season, opts.Episode)
-		}
 	}
 	return subs, nil
 }
