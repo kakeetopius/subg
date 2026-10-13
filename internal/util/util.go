@@ -4,6 +4,7 @@ package util
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -27,6 +28,11 @@ func CreateDirIfNotExists(dirName string) error {
 	return os.MkdirAll(dirName, 0o755)
 }
 
+func Exists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 func FileExists(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
@@ -44,12 +50,7 @@ func DirExists(path string) bool {
 }
 
 func ExtensionOf(fileName string) string {
-	dotIndex := strings.LastIndex(fileName, ".")
-	if dotIndex == -1 {
-		// no dot present
-		return ""
-	}
-	return fileName[dotIndex:]
+	return filepath.Ext(fileName)
 }
 
 func StripExtension(fileName string) string {

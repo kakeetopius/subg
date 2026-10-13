@@ -2,17 +2,21 @@
 package providers
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"charm.land/bubbles/v2/table"
 	"github.com/dreulavelle/jhin/parser"
+	"github.com/kakeetopius/subg/internal/embed"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/ui"
 	"github.com/kakeetopius/subg/internal/util"
@@ -55,6 +59,11 @@ func (set *ProviderSet) StartSearchAndDownload() error {
 
 outer:
 	for _, query := range set.Queries {
+		if query.InputFileName != "" {
+			parsedQuery := parseFileName(query.InputFileName, &query) // if an input file was given, parse it to get structured query info from it
+			query = parsedQuery
+		}
+
 		fmt.Println()
 		pterm.Info.Printf("Searching Subtitles for: %s\n", query.defaultName())
 
@@ -101,14 +110,15 @@ func (set *ProviderSet) getQueriesFromDirectory(dir string) ([]SearchOptions, er
 		if !isVideoExtension(util.ExtensionOf(file.Name())) {
 			continue
 		}
-		searchOpt := parseFileName(file.Name())
+		searchOpt := parseFileName(file.Name(), nil)
 		searchOpt.OutputDir = dir
+		searchOpt.Embed = set.DefaultEmbedSubtitles
 
 		searches = append(searches, searchOpt)
 	}
 
 	if len(searches) == 0 {
-		pterm.Warning.Println("Could not detect any video files in the directory: ", dir)
+		pterm.Warning.Println("Could not find any video files in the directory: ", dir)
 	}
 
 	return searches, nil
@@ -182,13 +192,38 @@ func (set *ProviderSet) tryDownloadSub(ctx context.Context, sub Subtitle, provid
 	if err != nil {
 		return err
 	}
+	spinner.Success("Download Complete")
+
+	if queryParams.Embed && queryParams.InputFileName != "" {
+		var subStream io.Reader = subFile.ReadCloser
+		if queryParams.KeepSub {
+			newSubStream := bytes.NewBuffer(make([]byte, 1024))
+			_, err = io.Copy(newSubStream, subFile.ReadCloser)
+			if err != nil {
+				return err
+			}
+			subStream = newSubStream
+		}
+
+		err = embed.EmbedSubtitle(ctx, embed.EmbedOptions{
+			File:      filepath.Join(queryParams.OutputDir, queryParams.InputFileName),
+			Subtitle:  subStream,
+			Overwrite: true,
+		})
+		if err != nil {
+			return fmt.Errorf("error embedding subtitle: %w", err)
+		}
+	}
+
+	if queryParams.Embed && !queryParams.KeepSub {
+		return nil
+	}
 
 	outFileName, err := set.saveSubtitle(&subFile, queryParams)
 	if err != nil {
 		return err
 	}
 
-	spinner.Success("Download Complete")
 	pterm.Info.Println("Subtitle saved at: ", outFileName)
 	return nil
 }
@@ -311,12 +346,13 @@ func isVideoExtension(ext string) bool {
 	}
 }
 
-// parseFileName parses filenames for movies and tv shows into meaningful structured data that can be used for searching.
-func parseFileName(fileName string) SearchOptions {
+// parseFileName parses filenames for movies and tv shows into meaningful structured data that can be used for searching and combines 'old' to give a new SearchOptions struct.
+func parseFileName(fileName string, old *SearchOptions) SearchOptions {
 	var opts SearchOptions
 
 	result := parser.Parse(fileName)
 	opts.Query = result.Title
+	opts.InputFileName = fileName
 
 	if len(result.Episodes) != 0 {
 		opts.Episode = result.Episodes[0]
@@ -332,6 +368,26 @@ func parseFileName(fileName string) SearchOptions {
 		year, err := strconv.Atoi(result.Year)
 		if err == nil {
 			opts.Year = year
+		}
+	}
+
+	if old != nil {
+		opts.Embed = old.Embed
+		opts.IMDBId = old.IMDBId
+		opts.Language = old.Language
+		opts.Type = old.Type
+		opts.SubtitleFormat = old.SubtitleFormat
+		opts.OutputFile = old.OutputFile
+		opts.OutputDir = old.OutputDir
+
+		if opts.Episode == 0 {
+			opts.Episode = old.Episode
+		}
+		if opts.Season == 0 {
+			opts.Season = old.Season
+		}
+		if opts.Year == 0 {
+			opts.Year = old.Year
 		}
 	}
 

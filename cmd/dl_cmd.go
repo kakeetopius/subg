@@ -25,6 +25,9 @@ func DownloadCmd() *cobra.Command {
 		outputDir      string
 		imdbID         int
 		directory      string
+		fileName       string
+		embed          bool
+		keep           bool
 
 		isMovie        bool
 		isSerie        bool
@@ -44,6 +47,7 @@ The following is the list of supported providers so far in order of priority.
   a7:   addic7ed.com
 `,
 		Aliases: []string{"dl", "d"},
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			providersToUse := appConfig.GetStringSlice("providers")
 
@@ -56,25 +60,34 @@ The following is the list of supported providers so far in order of priority.
 			}
 
 			providerSet := providers.NewProviderSet(providers.ProviderSetOptions{
-				Directory:        directory,
-				AutoSelect:       !noAutoSelect,
-				DefaultSubFormat: formatType,
+				Directory:             directory,
+				DefaultEmbedSubtitles: embed,
+				AutoSelect:            !noAutoSelect,
+				DefaultSubFormat:      formatType,
 			})
-			for _, query := range args {
-				providerSet.AppendQuery(providers.SearchOptions{
-					Query:          query,
-					IMDBId:         imdbID,
-					Season:         season,
-					Episode:        episode,
-					Language:       subtitleLang,
-					Year:           releaseYear,
-					SubtitleFormat: formatType,
-					OutputFile:     outputFile,
-					OutputDir:      outputDir,
-					IsMovie:        isMovie,
-					IsSerie:        isSerie,
-				})
+
+			searchOpts := providers.SearchOptions{
+				IMDBId:         imdbID,
+				Season:         season,
+				Episode:        episode,
+				Language:       subtitleLang,
+				Year:           releaseYear,
+				SubtitleFormat: formatType,
+				OutputFile:     outputFile,
+				OutputDir:      outputDir,
+				Embed:          embed,
+				KeepSub:        keep,
+				IsMovie:        isMovie,
+				IsSerie:        isSerie,
 			}
+			if len(args) > 0 {
+				searchOpts.Query = args[0]
+			}
+			if fileName != "" {
+				searchOpts.InputFileName = fileName
+			}
+
+			providerSet.AppendQuery(searchOpts)
 
 			cacheDir := appConfig.GetString("cache_dir")
 			for _, provider := range providersToUse {
@@ -121,15 +134,20 @@ The following is the list of supported providers so far in order of priority.
 	dlCmd.Flags().StringVarP(&subtitleLang, "lang", "l", "en", "The Language for the subtitle to download")
 	dlCmd.Flags().IntVarP(&season, "season", "s", 0, "The season if getting subtitles for a serie.")
 	dlCmd.Flags().IntVarP(&episode, "episode", "e", 0, "The episode number in a serie's season.")
-	dlCmd.Flags().StringVarP(&subtitleFormat, "format", "f", "srt", "The format to save the subtitle file(s) as.")
-	dlCmd.Flags().StringVarP(&directory, "dir", "d", "", "Download subtitles for all movies / tv shows in a a directory.")
 	dlCmd.Flags().IntVarP(&releaseYear, "year", "y", 0, "The release year of the movie or show")
-	dlCmd.Flags().StringVarP(&outputFile, "output-file", "o", "", "The output file name for downloaded subtitle.")
-	dlCmd.Flags().StringVar(&outputDir, "output-dir", "", "The output directory name for downloaded subtitle.")
+	dlCmd.Flags().StringVarP(&subtitleFormat, "format", "f", "srt", "The format to save the subtitle file as.")
 	dlCmd.Flags().IntVar(&imdbID, "imdb-id", 0, "Download a show or movie using imdb ID.")
-	dlCmd.Flags().BoolVar(&noAutoSelect, "no-auto", false, "Do not automatically select subtitle to download rather show results to allow the user to select.")
 	dlCmd.Flags().BoolVar(&isMovie, "movie", false, "Specifies that the query is for a movie to reduce ambiguity")
 	dlCmd.Flags().BoolVar(&isSerie, "serie", false, "Specifies that the query is for a serie to reduce ambiguity")
+
+	dlCmd.Flags().StringVarP(&fileName, "file", "F", "", "Download subtitles for a movie / tv show video file")
+	dlCmd.Flags().StringVarP(&directory, "dir", "d", "", "Download subtitles for all movies / tv shows in a a directory.")
+	dlCmd.Flags().BoolVar(&embed, "embed", false, "Embed the downloaded subtitle(s) into the video file(s) given via --file or --dir")
+	dlCmd.Flags().BoolVar(&keep, "keep", false, "Keep subtitle file even after embedding.")
+
+	dlCmd.Flags().StringVarP(&outputFile, "output-file", "o", "", "The output file name for downloaded subtitle.")
+	dlCmd.Flags().StringVar(&outputDir, "output-dir", "", "The output directory name for downloaded subtitle.")
+	dlCmd.Flags().BoolVar(&noAutoSelect, "no-auto", false, "Do not automatically select subtitle to download rather show results to allow the user to select.")
 
 	dlCmd.Flags().StringSliceVarP(&providersGiven, "providers", "p", nil, "The provider(s) to use.")
 	appConfig.BindPFlag("providers", dlCmd.Flags().Lookup("providers"))
