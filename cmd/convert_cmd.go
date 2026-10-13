@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
@@ -45,6 +46,11 @@ Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 				}
 
 				err = func() error {
+					innerErr := util.CreateDirIfNotExists(filepath.Base(outFile))
+					if innerErr != nil {
+						return innerErr
+					}
+
 					outFile, innerErr := os.OpenFile(outFile, os.O_RDWR|os.O_CREATE, 0o644)
 					if innerErr != nil {
 						return innerErr

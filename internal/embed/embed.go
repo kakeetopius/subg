@@ -81,7 +81,7 @@ func EmbedSubtitle(ctx context.Context, opts EmbedOptions) (err error) {
 		}
 	}()
 
-	err = runCmd(cmd, opts.Verbose)
+	err = util.RunCmd(cmd, opts.Verbose)
 	if err != nil {
 		return err
 	}
@@ -89,6 +89,10 @@ func EmbedSubtitle(ctx context.Context, opts EmbedOptions) (err error) {
 
 	if !opts.Overwrite || opts.OutputFileName != "" {
 		return nil
+	}
+	err = util.CreateDirIfNotExists(filepath.Base(outFileName))
+	if err != nil {
+		return err
 	}
 
 	return os.Rename(outFileName, opts.File)
@@ -106,34 +110,22 @@ func subtitleCodec(output string) (string, error) {
 	}
 }
 
-func runCmd(cmd *exec.Cmd, verbose bool) error {
-	if verbose {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err := cmd.Run()
-		if err != nil {
-			return err
-		}
-	} else {
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Println(string(output))
-			return err
-		}
-	}
-
-	return nil
-}
-
 func checkForBinaryDependencies() error {
 	_, err := exec.LookPath("ffmpeg")
 	if err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
-			return fmt.Errorf("ffmpeg not found in the $PATH. ffmpeg is required to embed subtitles into a video file. Install it first (or add it to $PATH) and then try again.")
+			return fmt.Errorf("ffmpeg not found in the $PATH. ffmpeg is required to extract subtitles from a video file. Install it first (or add it to $PATH) and then try again.")
 		}
 		return err
 	}
 
+	_, err = exec.LookPath("ffprobe")
+	if err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			return fmt.Errorf("ffprobe not found in the $PATH. ffprobe is required find which are subtitles  a video file. Install it first (or add it to $PATH) and then try again.")
+		}
+		return err
+	}
 	return nil
 }
 
@@ -142,6 +134,9 @@ func validateInputFile(file string) error {
 		return fmt.Errorf(" The file '%s' does not exist", file)
 	}
 
+	if !util.IsVideoExtension(util.ExtensionOf(file)) {
+		return fmt.Errorf("The file '%s' is neither a video or audio file", file)
+	}
 	return nil
 }
 

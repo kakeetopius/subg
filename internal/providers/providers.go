@@ -197,6 +197,7 @@ func (set *ProviderSet) tryDownloadSub(ctx context.Context, sub Subtitle, provid
 	if queryParams.Embed && queryParams.InputFileName != "" {
 		var subStream io.Reader = subFile.ReadCloser
 		if queryParams.KeepSubAfterEmbed {
+			// if we need to keep subtitle after embeding we copy the subtitle into a new buffer that will then be used for embedding.
 			newSubStream := bytes.NewBuffer(make([]byte, 1024))
 			_, err = io.Copy(newSubStream, subFile.ReadCloser)
 			if err != nil {

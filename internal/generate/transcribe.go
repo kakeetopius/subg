@@ -52,7 +52,7 @@ func Transcribe(opts TransciberOptions) error {
 	}
 
 	if opts.Directory != "" {
-		dirFiles, err := getInputFilesFromDirectory(opts.Directory)
+		dirFiles, err := util.GetFilesFromDir(opts.Directory, util.IsVideoOrAudioExtension)
 		if err != nil {
 			return err
 		}
@@ -137,6 +137,8 @@ func translateFiles(opts *TransciberOptions) error {
 }
 
 func embedSubs(opts *TransciberOptions) error {
+	// subtitle files should be already saved in the opts.OutputDir with the same name as the input file and with the extesion opts.SubtitleFormat
+
 	for _, file := range opts.InputFiles {
 		if !util.IsVideoExtension(util.ExtensionOf(file)) {
 			continue
@@ -144,7 +146,6 @@ func embedSubs(opts *TransciberOptions) error {
 		subPath := subtitleNameFromFileName(file, opts.SubtitleFormat)
 		subPath = filepath.Join(opts.OutputDir, subPath)
 
-		// subtitle files should be already saved in the opts.OutputDir with the same name as the input file and with the correct subtitle extension.
 		subtitleStream, err := os.Open(subPath)
 		if err != nil {
 			return err
@@ -190,7 +191,7 @@ func runTranscriber(opts *TransciberOptions, args []string) error {
 
 	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=%s", "HF_TOKEN", opts.HFToken))
 
-	err := runCmd(cmd, opts.Verbose)
+	err := util.RunCmd(cmd, opts.Verbose)
 	if err != nil {
 		return err
 	}
@@ -279,7 +280,7 @@ func initTranscirberPyEnv(cacheDir string, verbose bool) error {
 		"python", "-m", "venv", transcriberEnvPath,
 	)
 
-	return runCmd(cmd, verbose)
+	return util.RunCmd(cmd, verbose)
 }
 
 func installTranscriber(cacheDir string, verbose bool) error {
@@ -306,7 +307,7 @@ func installTranscriber(cacheDir string, verbose bool) error {
 		pip, "install", transcriberName,
 	)
 
-	return runCmd(cmd, verbose)
+	return util.RunCmd(cmd, verbose)
 }
 
 func buildArgs(sets ...[]string) []string {
@@ -326,52 +327,14 @@ func buildArgs(sets ...[]string) []string {
 func validateInputFiles(inFiles []string) error {
 	for _, file := range inFiles {
 		if !util.FileExists(file) {
-			return fmt.Errorf(" The file \"%s\" does not exist", file)
+			return fmt.Errorf(" The file '%s' does not exist", file)
+		}
+		if !util.IsVideoOrAudioExtension(util.ExtensionOf(file)) {
+			return fmt.Errorf("The file '%s' is neither a video or audio file", file)
 		}
 	}
 
 	return nil
-}
-
-func runCmd(cmd *exec.Cmd, verbose bool) error {
-	if verbose {
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		err := cmd.Run()
-		if err != nil {
-			return err
-		}
-	} else {
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Println(string(output))
-			return err
-		}
-	}
-
-	return nil
-}
-
-func getInputFilesFromDirectory(dirName string) ([]string, error) {
-	dirEntries, err := os.ReadDir(dirName)
-	if err != nil {
-		return nil, err
-	}
-
-	inputFiles := make([]string, 0, len(dirEntries))
-
-	for _, entry := range dirEntries {
-		if entry.IsDir() {
-			continue
-		}
-		fileName := entry.Name()
-		if !util.IsVideoOrAudio(util.ExtensionOf(fileName)) {
-			continue
-		}
-		inputFiles = append(inputFiles, filepath.Join(dirName, fileName))
-	}
-
-	return inputFiles, nil
 }
 
 func checkForBinaryDependencies() error {

@@ -80,6 +80,30 @@ func IsAudioExtension(ext string) bool {
 	}
 }
 
-func IsVideoOrAudio(ext string) bool {
+func IsVideoOrAudioExtension(ext string) bool {
 	return IsAudioExtension(ext) || IsVideoExtension(ext)
+}
+
+type FileFilterFunc func(string) bool
+
+func GetFilesFromDir(dirName string, extensionFilterFunc FileFilterFunc) ([]string, error) {
+	dirEntries, err := os.ReadDir(dirName)
+	if err != nil {
+		return nil, err
+	}
+
+	inputFiles := make([]string, 0, len(dirEntries))
+
+	for _, entry := range dirEntries {
+		if entry.IsDir() {
+			continue
+		}
+		fileName := entry.Name()
+		if !extensionFilterFunc(ExtensionOf(fileName)) {
+			continue
+		}
+		inputFiles = append(inputFiles, filepath.Join(dirName, fileName))
+	}
+
+	return inputFiles, nil
 }
