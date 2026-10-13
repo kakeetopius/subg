@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"charm.land/bubbles/v2/table"
+	"github.com/dreulavelle/jhin/parser"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/ui"
 	"github.com/kakeetopius/subg/internal/util"
@@ -40,7 +42,7 @@ func (set *ProviderSet) AppendQuery(query ...SearchOptions) *ProviderSet {
 // StartSearchAndDownload starts the search and download process for all subtitle queries in the ProviderSet. It iterates through each query and attempts to find and download subtitles from the registered providers. If a provider returns an error, it will continue to the next provider.
 func (set *ProviderSet) StartSearchAndDownload() error {
 	if set.Directory != "" {
-		queries, err := getQueriesFromDirectory(set.Directory)
+		queries, err := set.getQueriesFromDirectory(set.Directory)
 		if err != nil {
 			return err
 		}
@@ -85,7 +87,7 @@ outer:
 	return nil
 }
 
-func getQueriesFromDirectory(dir string) ([]SearchOptions, error) {
+func (set *ProviderSet) getQueriesFromDirectory(dir string) ([]SearchOptions, error) {
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
@@ -93,18 +95,16 @@ func getQueriesFromDirectory(dir string) ([]SearchOptions, error) {
 
 	searches := make([]SearchOptions, 0, len(files))
 	for _, file := range files {
-		if !isVideoExtension(util.ExtensionOf(file.Name())) {
-			continue
-		}
 		if file.IsDir() {
 			continue
 		}
+		if !isVideoExtension(util.ExtensionOf(file.Name())) {
+			continue
+		}
+		searchOpt := parseFileName(file.Name())
+		searchOpt.OutputDir = dir
 
-		searches = append(searches, SearchOptions{
-			Query:          util.StripExtension(file.Name()),
-			OutputDir:      dir,
-			SubtitleFormat: subformat.FormatTypeSRT,
-		})
+		searches = append(searches, searchOpt)
 	}
 
 	if len(searches) == 0 {
@@ -173,9 +173,7 @@ func (set *ProviderSet) tryDownloadSub(ctx context.Context, sub Subtitle, provid
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle")
 
 	defer func() {
-		if err == nil {
-			spinner.Success("Download Complete")
-		} else {
+		if err != nil {
 			spinner.Fail()
 		}
 	}()
@@ -185,21 +183,23 @@ func (set *ProviderSet) tryDownloadSub(ctx context.Context, sub Subtitle, provid
 		return err
 	}
 
-	err = set.saveSubtitle(&subFile, queryParams)
+	outFileName, err := set.saveSubtitle(&subFile, queryParams)
 	if err != nil {
 		return err
 	}
 
+	spinner.Success("Download Complete")
+	pterm.Info.Println("Subtitle saved at: ", outFileName)
 	return nil
 }
 
-// saveSubtitle saves the downloaded subtitle file to the specified output directory and format.
-func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchOptions) error {
+// saveSubtitle saves the downloaded subtitle file to the specified output directory and format and returns the path where it was saved or an error.
+func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchOptions) (string, error) {
 	defer subFile.Close()
 
 	subFormatter, err := subformat.NewSubFormatter(subFile.Type, subFile)
 	if err != nil {
-		return err
+		return "", err
 	}
 	var outFileName string
 	if queryParams.OutputFile != "" {
@@ -214,39 +214,34 @@ func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchO
 	if queryParams.OutputDir != "" {
 		err = util.CreateDirIfNotExists(queryParams.OutputDir)
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
 
 	outFile, err := os.OpenFile(outFileName, os.O_RDWR|os.O_CREATE, 0o644)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer outFile.Close()
 
 	err = subFormatter.ConvertToAndWrite(queryParams.SubtitleFormat, outFile)
 	if err != nil {
-		return err
+		return "", err
 	}
-	pterm.Info.Println("Subtitle saved at: ", outFileName)
-	return nil
+	return outFileName, nil
 }
 
 // defaultName returns a default output file name based on the search options. If the search is for a series, it includes the season and episode numbers in the file name.
 func (o *SearchOptions) defaultName() string {
-	if o.IsSerie {
-		sb := strings.Builder{}
-		sb.WriteString(o.Query)
-		if o.Season != 0 {
-			fmt.Fprintf(&sb, " Season %v", o.Season)
-		}
-		if o.Episode != 0 {
-			fmt.Fprintf(&sb, " Episode %v", o.Episode)
-		}
-		return sb.String()
+	sb := strings.Builder{}
+	sb.WriteString(o.Query)
+	if o.Season != 0 {
+		fmt.Fprintf(&sb, " Season %v", o.Season)
 	}
-
-	return o.Query
+	if o.Episode != 0 {
+		fmt.Fprintf(&sb, " Episode %v", o.Episode)
+	}
+	return sb.String()
 }
 
 // promptSelection displays a table of subtitles and prompts the user to select one. It returns the selected subtitle(s) or an error if the selection process fails.
@@ -314,4 +309,31 @@ func isVideoExtension(ext string) bool {
 	default:
 		return false
 	}
+}
+
+// parseFileName parses filenames for movies and tv shows into meaningful structured data that can be used for searching.
+func parseFileName(fileName string) SearchOptions {
+	var opts SearchOptions
+
+	result := parser.Parse(fileName)
+	opts.Query = result.Title
+
+	if len(result.Episodes) != 0 {
+		opts.Episode = result.Episodes[0]
+		opts.IsSerie = true
+	}
+
+	if len(result.Seasons) != 0 {
+		opts.Season = result.Seasons[0]
+		opts.IsSerie = true
+	}
+
+	if result.Year != "" {
+		year, err := strconv.Atoi(result.Year)
+		if err == nil {
+			opts.Year = year
+		}
+	}
+
+	return opts
 }

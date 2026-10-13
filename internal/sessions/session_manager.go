@@ -156,7 +156,7 @@ func (m SessionManager) saveSessionToCacheFile(domain string, s Session) error {
 
 // acquireSession launches a browser and navigates to the challenge URL, waiting for the required session cookies to be set. It returns a Session object containing the acquired cookies and user agent.
 func (m SessionManager) acquireSession(domain, challengeURL string) (Session, error) {
-	fmt.Println("\nBrowser window opened. Complete any challenges provided if prompted.")
+	fmt.Println("\nOpening Browser Window. Complete any challenges provided if prompted.")
 	fmt.Printf("Waiting up to %s for clearance cookies...\n", m.WaitDuration.String())
 
 	browserCtx, cancel := m.startBrowser()
