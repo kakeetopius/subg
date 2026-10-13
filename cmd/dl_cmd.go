@@ -67,18 +67,18 @@ The following is the list of supported providers so far in order of priority.
 			})
 
 			searchOpts := providers.SearchOptions{
-				IMDBId:         imdbID,
-				Season:         season,
-				Episode:        episode,
-				Language:       subtitleLang,
-				Year:           releaseYear,
-				SubtitleFormat: formatType,
-				OutputFile:     outputFile,
-				OutputDir:      outputDir,
-				Embed:          embed,
-				KeepSub:        keep,
-				IsMovie:        isMovie,
-				IsSerie:        isSerie,
+				IMDBId:            imdbID,
+				Season:            season,
+				Episode:           episode,
+				Language:          subtitleLang,
+				Year:              releaseYear,
+				SubtitleFormat:    formatType,
+				OutputFile:        outputFile,
+				OutputDir:         outputDir,
+				Embed:             embed,
+				KeepSubAfterEmbed: keep,
+				IsMovie:           isMovie,
+				IsSerie:           isSerie,
 			}
 			if len(args) > 0 {
 				searchOpts.Query = args[0]
@@ -143,7 +143,7 @@ The following is the list of supported providers so far in order of priority.
 	dlCmd.Flags().StringVarP(&fileName, "file", "F", "", "Download subtitles for a movie / tv show video file")
 	dlCmd.Flags().StringVarP(&directory, "dir", "d", "", "Download subtitles for all movies / tv shows in a a directory.")
 	dlCmd.Flags().BoolVar(&embed, "embed", false, "Embed the downloaded subtitle(s) into the video file(s) given via --file or --dir")
-	dlCmd.Flags().BoolVar(&keep, "keep", false, "Keep subtitle file even after embedding.")
+	dlCmd.Flags().BoolVar(&keep, "keep", false, "Keep subtitle file(s) even after embedding.")
 
 	dlCmd.Flags().StringVarP(&outputFile, "output-file", "o", "", "The output file name for downloaded subtitle.")
 	dlCmd.Flags().StringVar(&outputDir, "output-dir", "", "The output directory name for downloaded subtitle.")

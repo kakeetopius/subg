@@ -13,21 +13,25 @@ import (
 	"runtime"
 	"syscall"
 
+	"github.com/kakeetopius/subg/internal/embed"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
 )
 
 type TransciberOptions struct {
-	SubtitleFormat subformat.FormatType
-	InputFiles     []string
-	OutputDir      string
-	Language       string
-	Translate      bool
-	CacheDir       string
-	Verbose        bool
-	HFToken        string
-	Model          string
+	SubtitleFormat    subformat.FormatType
+	InputFiles        []string
+	Directory         string
+	OutputDir         string
+	Language          string
+	Translate         bool
+	Embed             bool
+	KeepSubAfterEmbed bool
+	CacheDir          string
+	Verbose           bool
+	HFToken           string
+	Model             string
 }
 
 const (
@@ -47,8 +51,22 @@ func Transcribe(opts TransciberOptions) error {
 		return err
 	}
 
+	if opts.Directory != "" {
+		dirFiles, err := getInputFilesFromDirectory(opts.Directory)
+		if err != nil {
+			return err
+		}
+		opts.InputFiles = append(opts.InputFiles, dirFiles...)
+	}
+
 	if opts.HFToken == "" {
 		pterm.Warning.Println("No Hugging Face Token provided. Please set a hugging face token to enable higher rate limits and faster downloads")
+	}
+	if opts.Directory != "" && opts.OutputDir == "" {
+		opts.OutputDir = opts.Directory // if an input directory was given but not out directory, then out dir should be the input directory
+	}
+	if opts.OutputDir == "" {
+		opts.OutputDir = "." // default to cwd
 	}
 
 	err = initTranscirberPyEnv(opts.CacheDir, opts.Verbose)
@@ -70,10 +88,11 @@ func Transcribe(opts TransciberOptions) error {
 	} else {
 		err = transcribeFile(&opts)
 	}
-	if err != nil {
+	if !opts.Embed {
 		return err
 	}
-	return nil
+
+	return embedSubs(&opts)
 }
 
 func transcribeFile(opts *TransciberOptions) error {
@@ -115,6 +134,42 @@ func translateFiles(opts *TransciberOptions) error {
 	args := buildArgs(opts.InputFiles, flags)
 
 	return runTranscriber(opts, args)
+}
+
+func embedSubs(opts *TransciberOptions) error {
+	for _, file := range opts.InputFiles {
+		if !util.IsVideoExtension(util.ExtensionOf(file)) {
+			continue
+		}
+		subPath := subtitleNameFromFileName(file, opts.SubtitleFormat)
+		subPath = filepath.Join(opts.OutputDir, subPath)
+
+		// subtitle files should be already saved in the opts.OutputDir with the same name as the input file and with the correct subtitle extension.
+		subtitleStream, err := os.Open(subPath)
+		if err != nil {
+			return err
+		}
+		defer subtitleStream.Close()
+		pterm.Info.Println("Embedding subtitles for file: ", file)
+
+		err = embed.EmbedSubtitle(context.Background(), embed.EmbedOptions{
+			File:      file,
+			Subtitle:  subtitleStream,
+			Overwrite: true,
+		})
+		if err != nil {
+			return err
+		}
+
+		if !opts.KeepSubAfterEmbed {
+			err = os.Remove(subPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func runTranscriber(opts *TransciberOptions, args []string) error {
@@ -297,6 +352,28 @@ func runCmd(cmd *exec.Cmd, verbose bool) error {
 	return nil
 }
 
+func getInputFilesFromDirectory(dirName string) ([]string, error) {
+	dirEntries, err := os.ReadDir(dirName)
+	if err != nil {
+		return nil, err
+	}
+
+	inputFiles := make([]string, 0, len(dirEntries))
+
+	for _, entry := range dirEntries {
+		if entry.IsDir() {
+			continue
+		}
+		fileName := entry.Name()
+		if !util.IsVideoOrAudio(util.ExtensionOf(fileName)) {
+			continue
+		}
+		inputFiles = append(inputFiles, filepath.Join(dirName, fileName))
+	}
+
+	return inputFiles, nil
+}
+
 func checkForBinaryDependencies() error {
 	_, err := exec.LookPath("python")
 	if err != nil {
@@ -332,4 +409,12 @@ func getPyEnvBinDir() string {
 	}
 
 	return "bin"
+}
+
+func subtitleNameFromFileName(videoFileName string, subFormat subformat.FormatType) string {
+	subFile := subformat.AddExtensionToSubFile(
+		util.StripExtension(videoFileName),
+		subFormat,
+	)
+	return filepath.Base(subFile)
 }

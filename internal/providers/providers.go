@@ -107,7 +107,7 @@ func (set *ProviderSet) getQueriesFromDirectory(dir string) ([]SearchOptions, er
 		if file.IsDir() {
 			continue
 		}
-		if !isVideoExtension(util.ExtensionOf(file.Name())) {
+		if !util.IsVideoExtension(util.ExtensionOf(file.Name())) {
 			continue
 		}
 		searchOpt := parseFileName(file.Name(), nil)
@@ -196,7 +196,7 @@ func (set *ProviderSet) tryDownloadSub(ctx context.Context, sub Subtitle, provid
 
 	if queryParams.Embed && queryParams.InputFileName != "" {
 		var subStream io.Reader = subFile.ReadCloser
-		if queryParams.KeepSub {
+		if queryParams.KeepSubAfterEmbed {
 			newSubStream := bytes.NewBuffer(make([]byte, 1024))
 			_, err = io.Copy(newSubStream, subFile.ReadCloser)
 			if err != nil {
@@ -215,7 +215,7 @@ func (set *ProviderSet) tryDownloadSub(ctx context.Context, sub Subtitle, provid
 		}
 	}
 
-	if queryParams.Embed && !queryParams.KeepSub {
+	if queryParams.Embed && !queryParams.KeepSubAfterEmbed {
 		return nil
 	}
 
@@ -244,7 +244,7 @@ func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchO
 	}
 
 	outFileName = subformat.AddExtensionToSubFile(outFileName, queryParams.SubtitleFormat)
-	outFileName = path.Join(queryParams.OutputDir, outFileName)
+	outFileName = path.Join(queryParams.OutputDir, filepath.Base(outFileName))
 
 	if queryParams.OutputDir != "" {
 		err = util.CreateDirIfNotExists(queryParams.OutputDir)
@@ -337,20 +337,11 @@ func subtitleByID(subs []Subtitle, id string) (Subtitle, error) {
 	return nil, fmt.Errorf("subtitle with id %v not found in results", id)
 }
 
-func isVideoExtension(ext string) bool {
-	switch strings.ToLower(ext) {
-	case ".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv", ".m4v":
-		return true
-	default:
-		return false
-	}
-}
-
 // parseFileName parses filenames for movies and tv shows into meaningful structured data that can be used for searching and combines 'old' to give a new SearchOptions struct.
 func parseFileName(fileName string, old *SearchOptions) SearchOptions {
 	var opts SearchOptions
 
-	result := parser.Parse(fileName)
+	result := parser.Parse(filepath.Base(fileName))
 	opts.Query = result.Title
 	opts.InputFileName = fileName
 

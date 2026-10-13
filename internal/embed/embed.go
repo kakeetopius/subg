@@ -9,8 +9,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/kakeetopius/subg/internal/util"
 	"github.com/pterm/pterm"
@@ -53,11 +55,16 @@ func EmbedSubtitle(ctx context.Context, opts EmbedOptions) (err error) {
 		fmt.Sprintf("%s%s%s", util.StripExtension(opts.File), outFileSuffix, fileExtension),
 	)
 
+	ctx, cancel := signal.NotifyContext(ctx, os.Interrupt, syscall.SIGQUIT)
+	defer cancel()
+
 	cmd := exec.CommandContext(
 		ctx,
 		"ffmpeg",
 		"-i", opts.File,
-		"-i", "pipe:0", // subtitle file will be passed via stdin
+		"-i", "pipe:0", // subtitle file will be passed via stdin (fd 0)
+		"-map", "0", // preserve all streams from the video.
+		"-map", "1:s", // only select subtitles from second stream
 		"-c", "copy", // copy embeded streams as they are without decoding and reencoding them.
 		"-c:s", subCodec, // the codec to use for subtitle stream
 		outFileName,
@@ -136,4 +143,10 @@ func validateInputFile(file string) error {
 	}
 
 	return nil
+}
+
+func awaitSignal() {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGQUIT)
+	<-signalChan
 }

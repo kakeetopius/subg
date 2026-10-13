@@ -61,3 +61,25 @@ func StripExtension(fileName string) string {
 	}
 	return fileName[:dotIndex]
 }
+
+func IsVideoExtension(ext string) bool {
+	switch strings.ToLower(ext) {
+	case ".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv", ".m4v":
+		return true
+	default:
+		return false
+	}
+}
+
+func IsAudioExtension(ext string) bool {
+	switch strings.ToLower(ext) {
+	case ".mp3", ".m4a", ".aac", ".wav", ".flac", ".ogg", ".opus", ".wma", ".aiff", ".alac":
+		return true
+	default:
+		return false
+	}
+}
+
+func IsVideoOrAudio(ext string) bool {
+	return IsAudioExtension(ext) || IsVideoExtension(ext)
+}

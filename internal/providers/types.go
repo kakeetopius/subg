@@ -68,18 +68,18 @@ type ProviderSetOptions struct {
 // SearchOptions are the general options for searching and downloading subtitles.
 type SearchOptions struct {
 	// Search Options
-	Query         string
-	IMDBId        int
-	Season        int
-	Episode       int
-	Language      string
-	Type          string
-	Year          int
-	IsMovie       bool
-	IsSerie       bool
-	InputFileName string
-	Embed         bool
-	KeepSub       bool
+	Query             string
+	IMDBId            int
+	Season            int
+	Episode           int
+	Language          string
+	Type              string
+	Year              int
+	IsMovie           bool
+	IsSerie           bool
+	InputFileName     string
+	Embed             bool
+	KeepSubAfterEmbed bool
 
 	// Download Options
 	SubtitleFormat subformat.FormatType
