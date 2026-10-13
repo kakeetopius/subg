@@ -245,9 +245,9 @@ func (set *ProviderSet) saveSubtitle(subFile *SubtitleFile, queryParams *SearchO
 	}
 
 	outFileName = subformat.AddExtensionToSubFile(outFileName, queryParams.SubtitleFormat)
-	outFileName = path.Join(queryParams.OutputDir, filepath.Base(outFileName))
 
 	if queryParams.OutputDir != "" {
+		outFileName = path.Join(queryParams.OutputDir, filepath.Base(outFileName))
 		err = util.CreateDirIfNotExists(queryParams.OutputDir)
 		if err != nil {
 			return "", err

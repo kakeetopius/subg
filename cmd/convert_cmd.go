@@ -18,54 +18,47 @@ func ConvertCmd() *cobra.Command {
 	)
 
 	convertCmd := cobra.Command{
-		Use:   "convert files...",
+		Use:   "convert file",
 		Short: "Convert subtitle from one format to another",
 		Long: `Convert subtitle from one format to another.
 
 Supported formats for now are: srt, vtt, ass, ssa, ttml, stl`,
 		Aliases: []string{"c"},
-		Args:    cobra.MinimumNArgs(1),
+		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			for _, file := range args {
-				formatter, err := subformat.NewSubFormatterFromFile(file)
-				if err != nil {
-					return err
+			file := args[0]
+			formatter, err := subformat.NewSubFormatterFromFile(file)
+			if err != nil {
+				return err
+			}
+
+			formatType, err := subformat.SubFormatFromFileNameOrFormatString(outFile, convertTo)
+			if err != nil {
+				if errors.Is(err, subformat.ErrCouldNotDetermineFormat) {
+					return fmt.Errorf("could not determine which format to convert to. use either the --convert-to flag or give an output file with the correct extension")
 				}
+				return err
+			}
 
-				formatType, err := subformat.SubFormatFromFileNameOrFormatString(outFile, convertTo)
-				if err != nil {
-					if errors.Is(err, subformat.ErrCouldNotDetermineFormat) {
-						return fmt.Errorf("could not determine which format to convert to. use either the --convert-to flag or give an output file with the correct extension")
-					}
-					return err
-				}
+			if outFile == "" {
+				outFile = util.StripExtension(file)
+				outFile = subformat.AddExtensionToSubFile(outFile, formatType)
+			}
 
-				if outFile == "" {
-					outFile = util.StripExtension(file)
-					outFile = subformat.AddExtensionToSubFile(outFile, formatType)
-				}
+			innerErr := util.CreateDirIfNotExists(filepath.Dir(outFile))
+			if innerErr != nil {
+				return innerErr
+			}
 
-				err = func() error {
-					innerErr := util.CreateDirIfNotExists(filepath.Base(outFile))
-					if innerErr != nil {
-						return innerErr
-					}
+			outFile, innerErr := os.OpenFile(outFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
+			if innerErr != nil {
+				return innerErr
+			}
+			defer outFile.Close()
 
-					outFile, innerErr := os.OpenFile(outFile, os.O_RDWR|os.O_CREATE, 0o644)
-					if innerErr != nil {
-						return innerErr
-					}
-					defer outFile.Close()
-
-					innerErr = formatter.ConvertToAndWrite(formatType, outFile)
-					if innerErr != nil {
-						return innerErr
-					}
-					return nil
-				}()
-				if err != nil {
-					return err
-				}
+			innerErr = formatter.ConvertToAndWrite(formatType, outFile)
+			if innerErr != nil {
+				return innerErr
 			}
 			return nil
 		},

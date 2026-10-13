@@ -59,6 +59,12 @@ func Transcribe(opts TransciberOptions) error {
 		opts.InputFiles = append(opts.InputFiles, dirFiles...)
 	}
 
+	if opts.OutputDir != "" {
+		err = util.CreateDirIfNotExists(opts.OutputDir)
+		if err != nil {
+			return err
+		}
+	}
 	if opts.HFToken == "" {
 		pterm.Warning.Println("No Hugging Face Token provided. Please set a hugging face token to enable higher rate limits and faster downloads")
 	}
@@ -200,13 +206,6 @@ func runTranscriber(opts *TransciberOptions, args []string) error {
 }
 
 func convertFilesToGivenFormatAndSave(opts *TransciberOptions) error {
-	var err error
-	if opts.OutputDir != "" {
-		err = util.CreateDirIfNotExists(opts.OutputDir)
-		if err != nil {
-			return err
-		}
-	}
 	outDir := opts.OutputDir
 
 	for _, file := range opts.InputFiles {
