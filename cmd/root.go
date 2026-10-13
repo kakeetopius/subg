@@ -68,9 +68,10 @@ func init() {
 
 	rootCmd.AddCommand(
 		DownloadCmd(),
+		ConvertCmd(),
 		GenCmd(),
 		EmbedCmd(),
-		ConvertCmd(),
+		ExtractCmd(),
 		LoginCmd(),
 		versionCmd(),
 	)

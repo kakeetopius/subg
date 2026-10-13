@@ -135,7 +135,7 @@ func validateInputFile(file string) error {
 	}
 
 	if !util.IsVideoExtension(util.ExtensionOf(file)) {
-		return fmt.Errorf("The file '%s' is neither a video or audio file", file)
+		return fmt.Errorf("The file '%s' is not a video file", file)
 	}
 	return nil
 }
