@@ -180,7 +180,7 @@ func embedSubs(opts *TransciberOptions) error {
 }
 
 func runTranscriber(opts *TransciberOptions, args []string) error {
-	transcriber := filepath.Join(opts.CacheDir, transcriberEnvDir, getPyEnvBinDir(), transcriberName)
+	transcriber := filepath.Join(opts.CacheDir, transcriberEnvDir, getPyEnvBinDir(), getTranscriberBinaryName())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -283,7 +283,7 @@ func initTranscirberPyEnv(cacheDir string, verbose bool) error {
 }
 
 func installTranscriber(cacheDir string, verbose bool) error {
-	transcriberPath := filepath.Join(cacheDir, transcriberEnvDir, getPyEnvBinDir(), transcriberName)
+	transcriberPath := filepath.Join(cacheDir, transcriberEnvDir, getPyEnvBinDir(), getTranscriberBinaryName())
 
 	if util.FileExists(transcriberPath) {
 		return nil
@@ -379,4 +379,12 @@ func subtitleNameFromFileName(videoFileName string, subFormat subformat.FormatTy
 		subFormat,
 	)
 	return filepath.Base(subFile)
+}
+
+func getTranscriberBinaryName() string {
+	if runtime.GOOS == "windows" {
+		return transcriberName + ".exe"
+	}
+
+	return transcriberName
 }
