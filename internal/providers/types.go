@@ -3,7 +3,10 @@ package providers
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"io"
+	"strings"
 
 	"github.com/kakeetopius/subg/internal/subformat"
 )
@@ -32,39 +35,6 @@ type Subtitle interface {
 	Fields() []string
 }
 
-// SubtitleFile represents the contents of a downloaded subtitle.
-type SubtitleFile struct {
-	// Name is the suggested filename of the subtitle. Can be empty
-	Name string
-
-	// Type identifies the subtitle format.
-	Type subformat.FormatType
-
-	// ReadCloser provides access to the subtitle contents.
-	io.ReadCloser
-}
-
-// ProviderSet coordinates searches and downloads across one or more subtitle providers.
-type ProviderSet struct {
-	// providers is the set of registered subtitle providers.
-	providers []Provider
-
-	ProviderSetOptions
-}
-
-type ProviderSetOptions struct {
-	AutoSelect bool
-
-	// Queries are the subtitles to search for
-	Queries []SearchOptions
-
-	Directory string
-
-	DefaultEmbedSubtitles bool
-
-	DefaultSubFormat subformat.FormatType
-}
-
 // SearchOptions are the general options for searching and downloading subtitles.
 type SearchOptions struct {
 	// Search Options
@@ -87,6 +57,37 @@ type SearchOptions struct {
 	OutputDir      string
 }
 
+// DefaultName returns a default output file name based on the search options. If the search is for a series, it includes the season and episode numbers in the file name.
+func (o *SearchOptions) DefaultName() string {
+	sb := strings.Builder{}
+	sb.WriteString(o.Query)
+	if o.Season != 0 {
+		fmt.Fprintf(&sb, " Season %v", o.Season)
+	}
+	if o.Episode != 0 {
+		fmt.Fprintf(&sb, " Episode %v", o.Episode)
+	}
+	return sb.String()
+}
+
+// SubtitleFile represents the contents of a downloaded subtitle.
+type SubtitleFile struct {
+	// Name is the suggested filename of the subtitle. Can be empty
+	Name string
+
+	// Type identifies the subtitle format.
+	Type subformat.FormatType
+
+	// ReadCloser provides access to the subtitle contents.
+	io.ReadCloser
+}
+
+type ProviderSet struct {
+	// providers is the set of registered subtitle providers.
+	providers       []Provider
+	nextProviderIdx int
+}
+
 type ErrNoResultsFound struct {
 	Query   string
 	Season  int
@@ -95,5 +96,7 @@ type ErrNoResultsFound struct {
 
 func (e ErrNoResultsFound) Error() string {
 	o := SearchOptions{Query: e.Query, Season: e.Season, Episode: e.Episode}
-	return "no results found for " + o.defaultName()
+	return "no results found for " + o.DefaultName()
 }
+
+var ErrNoMoreProviders = errors.New("no more providers in provider set.")

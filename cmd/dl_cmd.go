@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kakeetopius/subg/internal/downloader"
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/providers/addic7ed"
 	"github.com/kakeetopius/subg/internal/providers/opensubtitles"
@@ -59,13 +60,6 @@ The following is the list of supported providers so far in order of priority.
 				return err
 			}
 
-			providerSet := providers.NewProviderSet(providers.ProviderSetOptions{
-				Directory:             directory,
-				DefaultEmbedSubtitles: embed,
-				AutoSelect:            !noAutoSelect,
-				DefaultSubFormat:      formatType,
-			})
-
 			searchOpts := providers.SearchOptions{
 				IMDBId:            imdbID,
 				Season:            season,
@@ -80,14 +74,11 @@ The following is the list of supported providers so far in order of priority.
 				IsMovie:           isMovie,
 				IsSerie:           isSerie,
 			}
-			if len(args) > 0 {
-				searchOpts.Query = args[0]
-			}
 			if fileName != "" {
 				searchOpts.InputFileName = fileName
 			}
 
-			providerSet.AppendQuery(searchOpts)
+			providerSet := providers.NewProviderSet()
 
 			cacheDir := appConfig.GetString("cache_dir")
 			for _, provider := range providersToUse {
@@ -123,10 +114,22 @@ The following is the list of supported providers so far in order of priority.
 			}
 
 			if len(providersToUse) == 0 {
-				addAllProvidersToSet(providerSet)
+				addAllProvidersToSet(&providerSet)
 			}
 
-			return providerSet.StartSearchAndDownload()
+			downloader := downloader.New(providerSet, downloader.DownloaderOptions{
+				Directory:             directory,
+				DefaultEmbedSubtitles: embed,
+				AutoSelect:            !noAutoSelect,
+				DefaultSubFormat:      formatType,
+			})
+
+			if len(args) > 0 {
+				searchOpts.Query = args[0]
+				downloader.AppendQuery(searchOpts)
+			}
+
+			return downloader.StartSearchAndDownload()
 		},
 	}
 
