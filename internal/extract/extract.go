@@ -19,7 +19,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-type ExtractOptions struct {
+type Options struct {
 	Files     []string
 	Format    subformat.FormatType
 	Directory string
@@ -32,7 +32,7 @@ type subtitleStream struct {
 	codec string
 }
 
-func ExtractSubtitles(ctx context.Context, opts ExtractOptions) (err error) {
+func ExtractSubtitles(ctx context.Context, opts Options) (err error) {
 	err = checkForBinaryDependencies()
 	if err != nil {
 		return err

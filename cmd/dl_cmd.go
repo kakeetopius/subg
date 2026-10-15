@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kakeetopius/subg/internal/config"
 	"github.com/kakeetopius/subg/internal/downloader"
 	"github.com/kakeetopius/subg/internal/providers"
 	"github.com/kakeetopius/subg/internal/providers/addic7ed"
@@ -13,6 +14,7 @@ import (
 	subdlapi "github.com/kakeetopius/subg/internal/providers/subdl_api"
 	"github.com/kakeetopius/subg/internal/subformat"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func DownloadCmd() *cobra.Command {
@@ -50,7 +52,11 @@ The following is the list of supported providers so far in order of priority.
 		Aliases: []string{"dl", "d"},
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
-			providersToUse := appConfig.GetStringSlice("providers")
+			config, err := config.New(configPath(cmd), dlCmdConfigSetup(cmd))
+			if err != nil {
+				return err
+			}
+			config.Load()
 
 			formatType, err := subformat.SubFormatFromFileNameOrFormatString(outputFile, subtitleFormat)
 			if err != nil {
@@ -73,51 +79,15 @@ The following is the list of supported providers so far in order of priority.
 				KeepSubAfterEmbed: keep,
 				IsMovie:           isMovie,
 				IsSerie:           isSerie,
-			}
-			if fileName != "" {
-				searchOpts.InputFileName = fileName
+				InputFileName:     fileName,
 			}
 
-			providerSet := providers.NewProviderSet()
-
-			cacheDir := appConfig.GetString("cache_dir")
-			for _, provider := range providersToUse {
-				switch provider {
-				case "os":
-					providerSet.Append(opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
-						CacheDir: cacheDir,
-					}))
-				case "sd":
-					providerSet.Append(subdl.NewProvider())
-				case "a7":
-					providerSet.Append(addic7ed.NewProvider())
-				case "os_api":
-					apiKey := appConfig.GetString("opensubtitles.api_key")
-					if apiKey == "" {
-						return fmt.Errorf("cannot use os_api provider without an api key from opensubtitles.com")
-					}
-					providerSet.Append(opensubtitles.NewProvider(opensubtitles.OSOptions{
-						APIKey:   apiKey,
-						CacheDir: cacheDir,
-					}))
-				case "sd_api":
-					apiKey := appConfig.GetString("subdl.api_key")
-					if apiKey == "" {
-						return fmt.Errorf("cannot use sd_api provider without an api key subdl.com")
-					}
-					providerSet.Append(subdlapi.NewProvider(subdlapi.SubDLOpts{
-						APIKey: apiKey,
-					}))
-				default:
-					return fmt.Errorf("unknown provider code: %s", provider)
-				}
+			providerSet, err := buildProviderSet(config)
+			if err != nil {
+				return err
 			}
 
-			if len(providersToUse) == 0 {
-				addAllProvidersToSet(&providerSet)
-			}
-
-			downloader := downloader.New(providerSet, downloader.DownloaderOptions{
+			downloader := downloader.New(providerSet, downloader.Options{
 				Directory:             directory,
 				DefaultEmbedSubtitles: embed,
 				AutoSelect:            !noAutoSelect,
@@ -153,37 +123,96 @@ The following is the list of supported providers so far in order of priority.
 	dlCmd.Flags().BoolVar(&noAutoSelect, "no-auto", false, "Do not automatically select subtitle to download rather show results to allow the user to select.")
 
 	dlCmd.Flags().StringSliceVarP(&providersGiven, "providers", "p", nil, "The provider(s) to use.")
-	appConfig.BindPFlag("providers", dlCmd.Flags().Lookup("providers"))
+
+	dlCmd.Flags().String("os-api-key", "", "opensubtitles.com API Key. (Only required if the provider os_api is enabled.)")
+	dlCmd.Flags().String("sd-api-key", "", "subdl.com API Key. (Only required if the provider sd_api is enabled.)")
 	return &dlCmd
 }
 
-func addAllProvidersToSet(providerSet *providers.ProviderSet) {
-	cacheDir := appConfig.GetString("cache_dir")
+func dlCmdConfigSetup(cmd *cobra.Command) config.ConfigSetupFunc {
+	return func(cfg *viper.Viper) {
+		rootCmdConfigSetup(cmd)(cfg)
+
+		err := cfg.BindPFlag("providers", cmd.Flags().Lookup("providers"))
+		cobra.CheckErr(err)
+		err = cfg.BindPFlag("opensubtitles.api_key", cmd.Flags().Lookup("os-api-key"))
+		cobra.CheckErr(err)
+		err = cfg.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
+		cobra.CheckErr(err)
+		err = cfg.BindPFlag("subdl.api_key", cmd.Flags().Lookup("sd-api-key"))
+		cobra.CheckErr(err)
+		err = cfg.BindEnv("subdl.api_key", "SUBDL_API_KEY")
+	}
+}
+
+func buildProviderSet(config *config.Config) (providers.ProviderSet, error) {
+	if len(config.Providers) == 0 {
+		return defaultProviderSet(config), nil
+	}
+	providerSet := providers.NewProviderSet()
+
+	for _, provider := range config.Providers {
+		switch provider {
+		case "os":
+			providerSet.Append(opensubtitlesorg.NewProvider(opensubtitlesorg.Options{
+				CacheDir: config.CacheDir,
+			}))
+		case "sd":
+			providerSet.Append(subdl.NewProvider())
+		case "a7":
+			providerSet.Append(addic7ed.NewProvider())
+		case "os_api":
+			apiKey := config.OpenSubtitles.APIKey
+			if apiKey == "" {
+				return providers.ProviderSet{}, fmt.Errorf("cannot use os_api provider without an api key from opensubtitles.com")
+			}
+			providerSet.Append(opensubtitles.NewProvider(opensubtitles.Options{
+				APIKey:   apiKey,
+				CacheDir: config.CacheDir,
+			}))
+		case "sd_api":
+			apiKey := config.SubDL.APIKey
+			if apiKey == "" {
+				return providers.ProviderSet{}, fmt.Errorf("cannot use sd_api provider without an api key subdl.com")
+			}
+			providerSet.Append(subdlapi.NewProvider(subdlapi.Options{
+				APIKey: apiKey,
+			}))
+		default:
+			return providers.ProviderSet{}, fmt.Errorf("unknown provider code: %s", provider)
+		}
+	}
+
+	return providerSet, nil
+}
+
+func defaultProviderSet(config *config.Config) providers.ProviderSet {
+	providerSet := providers.NewProviderSet()
 
 	providerSet.Append(
-		opensubtitlesorg.NewProvider(opensubtitlesorg.OSOrgOptions{
-			CacheDir: cacheDir,
+		opensubtitlesorg.NewProvider(opensubtitlesorg.Options{
+			CacheDir: config.CacheDir,
 		}),
 		subdl.NewProvider(),
 		addic7ed.NewProvider(),
 	)
 
-	openSubAPIKey := appConfig.GetString("opensubtitles.api_key")
-	if openSubAPIKey != "" {
+	if config.OpenSubtitles.APIKey != "" {
 		providerSet.Append(
-			opensubtitles.NewProvider(opensubtitles.OSOptions{
-				APIKey:   appConfig.GetString("opensubtitles.api_key"),
-				CacheDir: cacheDir,
+			opensubtitles.NewProvider(opensubtitles.Options{
+				APIKey:   config.OpenSubtitles.APIKey,
+				CacheDir: config.CacheDir,
 			}),
 		)
 	}
 
-	subDLAPIKey := appConfig.GetString("subdl.api_key")
-	if subDLAPIKey != "" {
+	if config.SubDL.APIKey != "" {
 		providerSet.Append(
-			subdlapi.NewProvider(subdlapi.SubDLOpts{
-				APIKey: appConfig.GetString("subdl.api_key"),
+			subdlapi.NewProvider(subdlapi.Options{
+				APIKey: config.SubDL.APIKey,
 			}),
 		)
 	}
+
+	return providerSet
 }

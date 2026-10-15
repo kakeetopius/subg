@@ -19,6 +19,10 @@ func (set *ProviderSet) Append(provider ...Provider) *ProviderSet {
 	return set
 }
 
+func (set *ProviderSet) Len() int {
+	return len(set.providers)
+}
+
 func (set *ProviderSet) NextProvider() (Provider, error) {
 	if set.nextProviderIdx >= len(set.providers) {
 		return nil, ErrNoMoreProviders

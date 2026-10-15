@@ -1,9 +1,11 @@
 package cmd
 
 import (
-	"github.com/kakeetopius/subg/internal/generate"
+	"github.com/kakeetopius/subg/internal/config"
 	"github.com/kakeetopius/subg/internal/subformat"
+	"github.com/kakeetopius/subg/internal/transcriber"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 func GenCmd() *cobra.Command {
@@ -25,13 +27,19 @@ func GenCmd() *cobra.Command {
 		Aliases: []string{"g", "gen"},
 		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			config, err := config.New(configPath(cmd), genCmdConfigSetup(cmd))
+			if err != nil {
+				return err
+			}
+			config.Load()
+
 			subFormat, err := subformat.SubFormatFromString(subtitleFormat)
 			if err != nil {
 				return err
 			}
-			return generate.Transcribe(generate.TransciberOptions{
-				CacheDir:          appConfig.GetString("cache_dir"),
-				HFToken:           appConfig.GetString("transcriber.hf_token"),
+			return transcriber.Transcribe(transcriber.Options{
+				CacheDir:          config.CacheDir,
+				HFToken:           config.Transcriber.HFToken,
 				Verbose:           verbose,
 				InputFiles:        args,
 				Directory:         directory,
@@ -57,9 +65,18 @@ func GenCmd() *cobra.Command {
 	genCmd.Flags().BoolVarP(&keep, "keep", "k", false, "Keep subtitle file even after embedding.")
 
 	genCmd.Flags().String("hf-token", "", "The Hugging Face Access Token to access transcribing models.")
-	appConfig.BindPFlag("transcriber.hf_token", genCmd.Flags().Lookup("hf-token"))
-	appConfig.BindEnv("transcriber.hf_token", "HF_TOKEN")
 
 	genCmd.Flags().StringVarP(&model, "model", "m", "large-v3-turbo", "The whisper model to use (tiny, medium, large-v3, turbo etc). See https://github.com/openai/whisper/blob/main/model-card.md for more information.")
 	return &genCmd
+}
+
+func genCmdConfigSetup(cmd *cobra.Command) config.ConfigSetupFunc {
+	return func(cfg *viper.Viper) {
+		rootCmdConfigSetup(cmd)(cfg)
+
+		err := cfg.BindPFlag("transcriber.hf_token", cmd.Flags().Lookup("hf-token"))
+		cobra.CheckErr(err)
+		err = cfg.BindEnv("transcriber.hf_token", "HF_TOKEN")
+		cobra.CheckErr(err)
+	}
 }
