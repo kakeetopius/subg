@@ -5,20 +5,20 @@ import (
 	"github.com/kakeetopius/subg/internal/subformat"
 )
 
-func New(set providers.ProviderSet, opts DownloaderOptions) Downloader {
+func New(set providers.ProviderSet, opts Options) Downloader {
 	return Downloader{
-		DownloaderOptions: opts,
-		ProviderSet:       set,
+		Options:     opts,
+		ProviderSet: set,
 	}
 }
 
 type Downloader struct {
 	ProviderSet providers.ProviderSet
-	DownloaderOptions
+	Options
 	Queries []providers.SearchOptions
 }
 
-type DownloaderOptions struct {
+type Options struct {
 	AutoSelect            bool
 	Directory             string
 	DefaultEmbedSubtitles bool

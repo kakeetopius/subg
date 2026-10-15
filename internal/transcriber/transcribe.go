@@ -1,5 +1,5 @@
-// Package generate is used to transcribe and translate subtitles from audio or video files.
-package generate
+// Package transcriber is used to transcribe and translate subtitles from audio or video files.
+package transcriber
 
 import (
 	"cmp"
@@ -19,7 +19,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-type TransciberOptions struct {
+type Options struct {
 	SubtitleFormat    subformat.FormatType
 	InputFiles        []string
 	Directory         string
@@ -40,7 +40,7 @@ const (
 	defaultModelName  = "large-v3-turbo"
 )
 
-func Transcribe(opts TransciberOptions) error {
+func Transcribe(opts Options) error {
 	err := checkForBinaryDependencies()
 	if err != nil {
 		return err
@@ -101,7 +101,7 @@ func Transcribe(opts TransciberOptions) error {
 	return embedSubs(&opts)
 }
 
-func transcribeFile(opts *TransciberOptions) error {
+func transcribeFile(opts *Options) error {
 	pterm.Info.Println("Transcribing Audio. This might take a while.....")
 
 	flags := []string{
@@ -121,7 +121,7 @@ func transcribeFile(opts *TransciberOptions) error {
 	return runTranscriber(opts, args)
 }
 
-func translateFiles(opts *TransciberOptions) error {
+func translateFiles(opts *Options) error {
 	pterm.Info.Println("Translating Audio......")
 
 	flags := []string{
@@ -142,7 +142,7 @@ func translateFiles(opts *TransciberOptions) error {
 	return runTranscriber(opts, args)
 }
 
-func embedSubs(opts *TransciberOptions) error {
+func embedSubs(opts *Options) error {
 	// subtitle files should be already saved in the opts.OutputDir with the same name as the input file and with the extesion opts.SubtitleFormat
 
 	for _, file := range opts.InputFiles {
@@ -159,7 +159,7 @@ func embedSubs(opts *TransciberOptions) error {
 		defer subtitleStream.Close()
 		pterm.Info.Println("Embedding subtitles for file: ", file)
 
-		err = embed.EmbedSubtitle(context.Background(), embed.EmbedOptions{
+		err = embed.EmbedSubtitle(context.Background(), embed.Options{
 			File:      file,
 			Subtitle:  subtitleStream,
 			Overwrite: true,
@@ -179,7 +179,7 @@ func embedSubs(opts *TransciberOptions) error {
 	return nil
 }
 
-func runTranscriber(opts *TransciberOptions, args []string) error {
+func runTranscriber(opts *Options, args []string) error {
 	transcriber := filepath.Join(opts.CacheDir, transcriberEnvDir, getPyEnvBinDir(), getTranscriberBinaryName())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -205,7 +205,7 @@ func runTranscriber(opts *TransciberOptions, args []string) error {
 	return convertFilesToGivenFormatAndSave(opts)
 }
 
-func convertFilesToGivenFormatAndSave(opts *TransciberOptions) error {
+func convertFilesToGivenFormatAndSave(opts *Options) error {
 	outDir := opts.OutputDir
 
 	for _, file := range opts.InputFiles {

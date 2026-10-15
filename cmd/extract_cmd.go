@@ -26,7 +26,7 @@ func ExtractCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return extract.ExtractSubtitles(context.Background(), extract.ExtractOptions{
+			return extract.ExtractSubtitles(context.Background(), extract.Options{
 				Files:     args,
 				Verbose:   verbose,
 				OutputDir: outputDir,

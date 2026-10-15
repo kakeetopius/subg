@@ -7,64 +7,24 @@ import (
 	"path"
 
 	goversion "github.com/caarlos0/go-version"
+	"github.com/kakeetopius/subg/internal/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-var (
-	debug     bool
-	cfgFile   string
-	appConfig *viper.Viper
-)
-
-// rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:          "subg",
-	Short:        "A tool for downloading, generating, and manipulating subtitles.",
-	SilenceUsage: true,
-	Version:      buildVersion().GitVersion,
-
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return initConfig()
-	},
-}
-
-// Execute adds all child commands to the root command and sets flags appropriately.
-func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
-	}
-}
-
-func init() {
-	var (
-		apiKey   string
-		cacheDir string
-	)
-
+func Command() *cobra.Command {
 	cobra.EnableCommandSorting = false
 
-	appConfig = viper.New()
+	rootCmd := &cobra.Command{
+		Use:          "subg",
+		Short:        "A tool for downloading, generating, and manipulating subtitles.",
+		SilenceUsage: true,
+		Version:      buildVersion().GitVersion,
+	}
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/subg.toml)")
-
-	userCacheDir, err := os.UserCacheDir()
-	cobra.CheckErr(err)
-	rootCmd.PersistentFlags().StringVar(&cacheDir, "cache-dir", "", "The directory to store cached information like JWT token")
-	rootCmd.PersistentFlags().MarkHidden("cache-dir")
-	appConfig.BindPFlag("cache_dir", rootCmd.PersistentFlags().Lookup("cache-dir"))
-	appConfig.SetDefault("cache_dir", path.Join(userCacheDir, "subg"))
-
-	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "API Key to subtitle provider.")
-	rootCmd.PersistentFlags().MarkHidden("api-key")
-	apiKeyPflag := rootCmd.PersistentFlags().Lookup("api-key")
-	appConfig.BindPFlag("opensubtitles.api_key", apiKeyPflag)
-	appConfig.BindEnv("opensubtitles.api_key", "OPENSUBTITLES_API_KEY")
-	appConfig.BindPFlag("subdl.api_key", apiKeyPflag)
-	appConfig.BindEnv("subdl.api_key", "SUBDL_API_KEY")
-
-	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "Run in debug mode.")
+	rootCmd.PersistentFlags().String("config", "", "config file (default is $HOME/subg.toml)")
+	rootCmd.PersistentFlags().String("cache-dir", "", "The directory to store cached information like JWT token")
+	rootCmd.PersistentFlags().Bool("debug", false, "Run in debug mode.")
 
 	rootCmd.AddCommand(
 		DownloadCmd(),
@@ -75,41 +35,23 @@ func init() {
 		LoginCmd(),
 		versionCmd(),
 	)
+
+	return rootCmd
 }
 
-// initConfig reads in config file and ENV variables if set.
-func initConfig() error {
-	if cfgFile != "" {
-		// Use config file from the flag.
-		appConfig.SetConfigFile(cfgFile)
-	} else {
-		configDir, err := os.UserConfigDir()
-		if err != nil {
-			return err
-		}
+func rootCmdConfigFlagBinder(cmd *cobra.Command) config.FlagBinder {
+	return func(cfg *viper.Viper) {
+		userCacheDir, err := os.UserCacheDir()
+		cobra.CheckErr(err)
 
-		// Search config in home directory with name "subg" (without extension).
-		appConfig.AddConfigPath(configDir)
-		appConfig.AddConfigPath(path.Join(configDir, "subg"))
-		appConfig.SetConfigName("subg")
+		cfg.BindPFlag("cache_dir", cmd.PersistentFlags().Lookup("cache-dir"))
+		cfg.SetDefault("cache_dir", path.Join(userCacheDir, "subg"))
 	}
+}
 
-	appConfig.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := appConfig.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			// if file not found no need to error.
-			return nil
-		}
-		return fmt.Errorf("error reading config file %v: %w", viper.ConfigFileUsed(), err)
-	}
-
-	if debug {
-		fmt.Fprintln(os.Stderr, "Using config file:", appConfig.ConfigFileUsed())
-	}
-
-	return nil
+func configPath(cmd *cobra.Command) string {
+	config, _ := cmd.PersistentFlags().GetString("config")
+	return config
 }
 
 func versionCmd() *cobra.Command {

@@ -8,10 +8,10 @@ import (
 )
 
 type SubDL struct {
-	SubDLOpts
+	Options
 }
 
-type SubDLOpts struct {
+type Options struct {
 	APIKey string
 }
 
@@ -23,9 +23,9 @@ func (s SDSubtitle) Fields() []string {
 	return []string{fmt.Sprint(s.SubID), s.ReleaseName, s.Lang, s.Author}
 }
 
-func NewProvider(opts SubDLOpts) *SubDL {
+func NewProvider(opts Options) *SubDL {
 	return &SubDL{
-		SubDLOpts: opts,
+		Options: opts,
 	}
 }
 

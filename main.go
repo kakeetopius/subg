@@ -1,7 +1,14 @@
 package main
 
-import "github.com/kakeetopius/subg/cmd"
+import (
+	"os"
+
+	"github.com/kakeetopius/subg/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	err := cmd.Command().Execute()
+	if err != nil {
+		os.Exit(1)
+	}
 }

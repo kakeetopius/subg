@@ -9,10 +9,10 @@ import (
 
 type OpenSubtitlesOrg struct {
 	session sessions.Session
-	OSOrgOptions
+	Options
 }
 
-type OSOrgOptions struct {
+type Options struct {
 	CacheDir string
 }
 
@@ -32,9 +32,9 @@ func (s OSOrgSubtitle) Fields() []string {
 	return []string{s.SubtitleID, s.Name, s.Language, s.Votes}
 }
 
-func NewProvider(opts OSOrgOptions) *OpenSubtitlesOrg {
+func NewProvider(opts Options) *OpenSubtitlesOrg {
 	return &OpenSubtitlesOrg{
-		OSOrgOptions: opts,
+		Options: opts,
 	}
 }
 

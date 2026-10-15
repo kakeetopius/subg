@@ -28,7 +28,7 @@ func EmbedCmd() *cobra.Command {
 			}
 			defer subtitle.Close()
 
-			return embed.EmbedSubtitle(context.Background(), embed.EmbedOptions{
+			return embed.EmbedSubtitle(context.Background(), embed.Options{
 				File:           args[0],
 				Subtitle:       subtitle,
 				OutputFileName: outputFile,

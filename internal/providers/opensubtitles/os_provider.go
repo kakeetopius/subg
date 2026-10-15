@@ -8,10 +8,10 @@ import (
 )
 
 type OpenSubtitles struct {
-	OSOptions
+	Options
 }
 
-type OSOptions struct {
+type Options struct {
 	APIKey   string
 	CacheDir string
 }
@@ -24,9 +24,9 @@ func (s OSSubtitle) Fields() []string {
 	return []string{s.SubtitleID, s.Release, s.Language, fmt.Sprint(s.Ratings), fmt.Sprint(s.Votes)}
 }
 
-func NewProvider(opts OSOptions) *OpenSubtitles {
+func NewProvider(opts Options) *OpenSubtitles {
 	return &OpenSubtitles{
-		OSOptions: opts,
+		Options: opts,
 	}
 }
 

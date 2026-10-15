@@ -18,7 +18,7 @@ import (
 	"github.com/pterm/pterm"
 )
 
-type EmbedOptions struct {
+type Options struct {
 	File           string
 	Subtitle       io.Reader
 	OutputFileName string
@@ -26,7 +26,7 @@ type EmbedOptions struct {
 	Overwrite      bool
 }
 
-func EmbedSubtitle(ctx context.Context, opts EmbedOptions) (err error) {
+func EmbedSubtitle(ctx context.Context, opts Options) (err error) {
 	err = checkForBinaryDependencies()
 	if err != nil {
 		return err

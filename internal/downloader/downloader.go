@@ -186,7 +186,7 @@ func (d *Downloader) tryDownloadSub(ctx context.Context, sub providers.Subtitle,
 			subStream = newSubStream
 		}
 
-		err = embed.EmbedSubtitle(ctx, embed.EmbedOptions{
+		err = embed.EmbedSubtitle(ctx, embed.Options{
 			File:      filepath.Join(queryParams.OutputDir, queryParams.InputFileName),
 			Subtitle:  subStream,
 			Overwrite: true,
