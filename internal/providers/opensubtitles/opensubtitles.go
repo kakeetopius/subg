@@ -249,8 +249,8 @@ func (p *OpenSubtitles) downloadSubtitle(ctx context.Context, subtitle *OSSubtit
 	}
 
 	return providers.SubtitleFile{
-		Name:       file2Download.FileName,
-		Type:       subformat.FormatTypeSRT,
-		ReadCloser: resp.Body,
+		Name:   file2Download.FileName,
+		Type:   subformat.FormatTypeSRT,
+		Reader: resp.Body,
 	}, nil
 }

@@ -96,6 +96,8 @@ The following is the list of supported providers so far in order of priority.
 
 			if len(args) > 0 {
 				searchOpts.Query = args[0]
+			}
+			if len(args) > 0 || fileName != "" {
 				downloader.AppendQuery(searchOpts)
 			}
 

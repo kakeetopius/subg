@@ -38,10 +38,10 @@ func (set *ProviderSet) Reset() {
 
 func (set *ProviderSet) Iter() iter.Seq[Provider] {
 	return func(yield func(Provider) bool) {
+		defer set.Reset()
 		for {
 			provider, err := set.NextProvider()
 			if err != nil && errors.Is(err, ErrNoMoreProviders) {
-				set.Reset()
 				return
 			}
 

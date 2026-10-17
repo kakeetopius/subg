@@ -79,7 +79,7 @@ type SubtitleFile struct {
 	Type subformat.FormatType
 
 	// ReadCloser provides access to the subtitle contents.
-	io.ReadCloser
+	io.Reader
 }
 
 type ProviderSet struct {

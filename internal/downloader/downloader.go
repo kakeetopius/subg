@@ -162,28 +162,25 @@ func (d *Downloader) searchSubtitleWithProvider(provider providers.Provider, que
 func (d *Downloader) tryDownloadSub(ctx context.Context, sub providers.Subtitle, provider providers.Provider, queryParams *providers.SearchOptions) error {
 	spinner, err := pterm.DefaultSpinner.Start("Downloading Subtitle")
 
-	defer func() {
-		if err != nil {
-			spinner.Fail()
-		}
-	}()
-
 	subFile, err := provider.Download(ctx, sub)
 	if err != nil {
+		spinner.Fail()
 		return err
 	}
 	spinner.Success("Download Complete")
 
 	if queryParams.Embed && queryParams.InputFileName != "" {
-		var subStream io.Reader = subFile.ReadCloser
+		var subStream io.Reader = subFile.Reader
 		if queryParams.KeepSubAfterEmbed {
 			// if we need to keep subtitle after embeding we copy the subtitle into a new buffer that will then be used for embedding.
-			newSubStream := bytes.NewBuffer(make([]byte, 1024))
-			_, err = io.Copy(newSubStream, subFile.ReadCloser)
+			// and create two readers one that will be used embedder and one that will be used for saving the file.
+			newSubStream := bytes.NewBuffer(make([]byte, 0))
+			_, err = io.Copy(newSubStream, subFile.Reader)
 			if err != nil {
 				return err
 			}
-			subStream = newSubStream
+			subStream = bytes.NewReader(newSubStream.Bytes())
+			subFile.Reader = bytes.NewReader(newSubStream.Bytes())
 		}
 
 		err = embed.EmbedSubtitle(ctx, embed.Options{
@@ -211,8 +208,6 @@ func (d *Downloader) tryDownloadSub(ctx context.Context, sub providers.Subtitle,
 
 // saveSubtitle saves the downloaded subtitle file to the specified output directory and format and returns the path where it was saved or an error.
 func (d *Downloader) saveSubtitle(subFile *providers.SubtitleFile, queryParams *providers.SearchOptions) (string, error) {
-	defer subFile.Close()
-
 	subFormatter, err := subformat.NewSubFormatter(subFile.Type, subFile)
 	if err != nil {
 		return "", err
@@ -310,6 +305,10 @@ func parseFileName(fileName string, old *providers.SearchOptions) providers.Sear
 	var opts providers.SearchOptions
 
 	result := parser.Parse(filepath.Base(fileName))
+	if old != nil {
+		opts = *old
+	}
+
 	opts.Query = result.Title
 	opts.InputFileName = fileName
 
@@ -327,26 +326,6 @@ func parseFileName(fileName string, old *providers.SearchOptions) providers.Sear
 		year, err := strconv.Atoi(result.Year)
 		if err == nil {
 			opts.Year = year
-		}
-	}
-
-	if old != nil {
-		opts.Embed = old.Embed
-		opts.IMDBId = old.IMDBId
-		opts.Language = old.Language
-		opts.Type = old.Type
-		opts.SubtitleFormat = old.SubtitleFormat
-		opts.OutputFile = old.OutputFile
-		opts.OutputDir = old.OutputDir
-
-		if opts.Episode == 0 {
-			opts.Episode = old.Episode
-		}
-		if opts.Season == 0 {
-			opts.Season = old.Season
-		}
-		if opts.Year == 0 {
-			opts.Year = old.Year
 		}
 	}
 

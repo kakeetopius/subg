@@ -65,8 +65,8 @@ func downloadSubtitle(ctx context.Context, sub *A7Subtitle) (subtitleFile provid
 	}
 
 	return providers.SubtitleFile{
-		Type:       subformat.FormatTypeSRT,
-		ReadCloser: subtitleBytes,
+		Type:   subformat.FormatTypeSRT,
+		Reader: subtitleBytes,
 	}, nil
 }
 

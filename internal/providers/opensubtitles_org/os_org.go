@@ -92,9 +92,9 @@ func (p *OpenSubtitlesOrg) downloadSubtitle(ctx context.Context, subtitle *OSOrg
 	}
 
 	return providers.SubtitleFile{
-		Name:       util.StripExtension(subFile.Name),
-		Type:       format,
-		ReadCloser: subBytes,
+		Name:   util.StripExtension(subFile.Name),
+		Type:   format,
+		Reader: subBytes,
 	}, nil
 }
 

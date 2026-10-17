@@ -85,17 +85,21 @@ func EmbedSubtitle(ctx context.Context, opts Options) (err error) {
 	if err != nil {
 		return err
 	}
-	spinner.Success("Embedding Done.")
 
 	if !opts.Overwrite || opts.OutputFileName != "" {
 		return nil
 	}
-	err = util.CreateDirIfNotExists(filepath.Base(outFileName))
+	err = util.CreateDirIfNotExists(filepath.Dir(outFileName))
 	if err != nil {
 		return err
 	}
 
-	return os.Rename(outFileName, opts.File)
+	err = os.Rename(outFileName, opts.File)
+	if err != nil {
+		return err
+	}
+	spinner.Success("Embedding Done.")
+	return nil
 }
 
 func subtitleCodec(output string) (string, error) {

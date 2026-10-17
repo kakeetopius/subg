@@ -70,9 +70,9 @@ func (p *SubDL) downloadSubtitle(ctx context.Context, sub SDSubtitle) (subtitleF
 	}
 
 	return providers.SubtitleFile{
-		Name:       util.StripExtension(subFile.Name),
-		Type:       format,
-		ReadCloser: subBytes,
+		Name:   util.StripExtension(subFile.Name),
+		Type:   format,
+		Reader: subBytes,
 	}, nil
 }
 
